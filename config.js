@@ -13,10 +13,16 @@ window.EXN = {
      ถ้าเว้น url ว่างไว้ = โหมดเดโม เก็บข้อมูลในเครื่องที่กรอกเท่านั้น
   -------------------------------------------------- */
   db: {
-    url : "https://exclusive-night-default-rtdb.asia-southeast1.firebasedatabase.app",         /* เช่น "https://exclusive-night-default-rtdb.asia-southeast1.firebasedatabase.app" */
+    url : "",          /* เช่น "https://exclusive-night-default-rtdb.asia-southeast1.firebasedatabase.app" */
     path: "rsvps",
     auth: ""           /* ไม่บังคับ */
   },
+
+  /* ---------- รหัสผู้ดูแล ----------
+     ใช้ตอนกดลบรายการในหน้าแดชบอร์ด ถามครั้งเดียวต่อการเปิดหนึ่งครั้ง
+     กันการเผลอกดและกันคนที่บังเอิญได้ลิงก์ไป ไม่ใช่ระบบความปลอดภัยเต็มรูปแบบ
+  -------------------------------------------------- */
+  adminPin: "2610",
 
   /* ---------- ลิงก์ที่ QR บนบัตรเชิญจะพาไป ----------
      เว้นว่างไว้ = ใช้ rsvp.html ในโฟลเดอร์เดียวกันอัตโนมัติ (แนะนำ)

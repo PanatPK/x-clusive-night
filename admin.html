@@ -121,6 +121,14 @@
     <p>ต้องการลบรายการนี้ออกจากระบบใช่หรือไม่</p>
     <div class="who" id="cWho"></div>
     <p class="warn">ลบแล้วกู้คืนไม่ได้ · หากต้องการเก็บข้อมูลไว้ ให้ดาวน์โหลด CSV ก่อน</p>
+    <div id="pinWrap" style="margin-top:16px">
+      <label style="display:block;font-size:9px;letter-spacing:.2em;color:var(--grey);margin-bottom:7px">
+        รหัสผู้ดูแล</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••"
+             style="width:100%;font-family:inherit;font-size:16px;letter-spacing:.3em;text-align:center;
+                    padding:11px;border:1px solid var(--line);outline:none">
+      <p id="pinErr" style="display:none;font-size:11.5px;color:var(--se-red);margin:7px 0 0">รหัสไม่ถูกต้อง</p>
+    </div>
     <div class="row2">
       <button class="no" id="delNo">ยกเลิก</button>
       <button class="yes" id="delYes">ลบรายการ</button>
@@ -214,9 +222,15 @@ function draw(){
 
 let pendingKey = null;
 
+const ADMIN_PIN = (window.EXN && window.EXN.adminPin) || "2610";
+const unlocked = ()=>{ try{ return sessionStorage.getItem("exn_admin")==="1"; }catch(e){ return false; } };
+
 function askDelete(key){
   const r = rows.find(x=>x.key===key); if(!r) return;
   pendingKey = key;
+  pinErr.style.display = "none";
+  pin.value = "";
+  pinWrap.style.display = unlocked() ? "none" : "block";
   cWho.innerHTML = `<b>${esc(r.name||"-")}</b><br>` +
     `${esc(r.company||"")}${r.code?" · "+esc(r.code):""}<br>` +
     `${esc(r.phone||"")}`;
@@ -229,6 +243,13 @@ addEventListener("keydown", e=>{ if(e.key === "Escape" && confirmBox.classList.c
 
 delYes.onclick = async ()=>{
   if(!pendingKey) return;
+  if(!unlocked()){
+    if(pin.value.trim() !== ADMIN_PIN){
+      pinErr.style.display = "block"; pin.focus(); pin.select();
+      return;
+    }
+    try{ sessionStorage.setItem("exn_admin","1"); }catch(e){}
+  }
   const key = pendingKey; pendingKey = null;
   confirmBox.classList.remove("open");
   rows = rows.filter(x=>x.key !== key);
