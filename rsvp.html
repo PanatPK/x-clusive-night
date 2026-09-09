@@ -167,17 +167,6 @@
           <button type="button" data-val="no" aria-pressed="false">ไม่สะดวกเข้าร่วม</button>
         </div></div>
 
-      <div class="field" id="guestField"><label>จำนวนผู้เข้าร่วม (รวมท่าน)</label>
-        <div class="stepper">
-          <button type="button" id="minus" aria-label="ลดจำนวน">−</button>
-          <output id="guestOut">1</output>
-          <button type="button" id="plus" aria-label="เพิ่มจำนวน">+</button>
-          <span>สูงสุด 2 ท่าน</span>
-        </div></div>
-
-      <div class="field" id="companionField"><label for="fCompanion">ชื่อผู้ติดตาม</label>
-        <input id="fCompanion" type="text" placeholder="ชื่อ – นามสกุล ผู้ร่วมเดินทาง"></div>
-
       <div class="field" id="dietField"><label for="fDiet">อาหารที่แพ้ / ข้อจำกัดด้านอาหาร</label>
         <textarea id="fDiet" placeholder="เช่น แพ้อาหารทะเล, มังสวิรัติ, ฮาลาล"></textarea></div>
 
@@ -230,7 +219,7 @@ const CODE_FROM_URL = (qp.get("code") || "").trim();
 const NAME = qp.get("name") || "";
 if(NAME) fName.value = NAME;
 
-let attending = "yes", guests = 1;
+let attending = "yes";
 let existingKey = null;
 let myCode = CODE_FROM_URL;          /* ว่าง = ระบบจะสุ่มให้ตอนกดยืนยัน */
 
@@ -291,15 +280,11 @@ function fillFrom(v){
   fPhone.value   = v.phone || "";
   fEmail.value   = v.email || "";
   fDiet.value    = v.diet || "";
-  fCompanion.value = v.companion || "";
   fConsent.checked = true;
-  guests = Math.min(2, Math.max(1, Number(v.guests) || 1));
-  guestOut.textContent = guests;
   const want = (v.attending === "no") ? "no" : "yes";
   document.querySelectorAll("#attendChoice button").forEach(b=>{
     if(b.dataset.val === want) b.click();
   });
-  syncCompanion();
   submitBtn.textContent = "อัปเดตข้อมูล";
 }
 
@@ -307,16 +292,9 @@ document.querySelectorAll("#attendChoice button").forEach(b=>{
   b.onclick = ()=>{
     attending = b.dataset.val;
     document.querySelectorAll("#attendChoice button").forEach(x=>x.setAttribute("aria-pressed", x===b));
-    const show = attending==="yes" ? "block" : "none";
-    guestField.style.display = show;
-    dietField.style.display  = show;
-    syncCompanion();
+    dietField.style.display = attending==="yes" ? "block" : "none";
   };
 });
-const syncCompanion = ()=>{ companionField.style.display = (attending==="yes" && guests>1) ? "block" : "none"; };
-plus.onclick  = ()=>{ if(guests<2){ guests++; guestOut.textContent=guests; syncCompanion(); } };
-minus.onclick = ()=>{ if(guests>1){ guests--; guestOut.textContent=guests; syncCompanion(); } };
-syncCompanion();
 
 /* เบอร์โทร: รับเฉพาะตัวเลข ไม่เกิน 10 หลัก แล้วใส่ขีดให้เอง 0XX-XXX-XXXX */
 fPhone.addEventListener("input", e=>{
@@ -354,8 +332,8 @@ submitBtn.onclick = async ()=>{
 
   const record = {
     code:myCode, name, company:fCompany.value.trim(), phone, email, attending,
-    guests: attending==="yes" ? guests : 0,
-    companion: (attending==="yes" && guests>1) ? fCompanion.value.trim() : "",
+    guests: attending==="yes" ? 1 : 0,
+    companion: "",
     diet: attending==="yes" ? fDiet.value.trim() : "",
     checkedIn:false, checkedInAt:"",
     submittedAt:new Date().toISOString()
@@ -416,8 +394,6 @@ submitBtn.onclick = async ()=>{
     `<div><span>NAME</span><b>${record.name}</b></div>`+
     (record.company ? `<div><span>COMPANY</span><b>${record.company}</b></div>` : "")+
     `<div><span>PHONE</span><b>${record.phone}</b></div>`+
-    (yes ? `<div><span>GUESTS</span><b>${guests} ท่าน</b></div>` : "")+
-    (record.companion ? `<div><span>COMPANION</span><b>${record.companion}</b></div>` : "")+
     (record.diet ? `<div><span>DIET</span><b>${record.diet}</b></div>` : "")+
     `<div><span>CODE</span><b>${myCode}</b></div>`;
 
