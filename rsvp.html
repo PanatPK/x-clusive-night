@@ -252,7 +252,7 @@ async function lookupByCode(code){
 
 /* ---------- 3) สุ่มรหัสไม่ซ้ำ ---------- */
 const ALPHA = "ACDEFGHJKLMNPQRTUVWXY34679";
-const rand4 = ()=> Array.from({length:4},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
+const rand4 = ()=> Array.from({length:3},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
 async function newCode(){
   let taken = new Set();
   if(DB.url){
@@ -262,7 +262,7 @@ async function newCode(){
     }catch(e){}
   }
   let c, n = 0;
-  do{ c = "EXN-" + rand4(); n++; }while(taken.has(c) && n < 500);
+  do{ c = "X-Night-" + rand4(); n++; }while(taken.has(c) && n < 500);
   return c;
 }
 
