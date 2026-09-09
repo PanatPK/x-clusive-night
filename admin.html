@@ -122,8 +122,8 @@
     <div class="who" id="cWho"></div>
     <p class="warn">ลบแล้วกู้คืนไม่ได้ · หากต้องการเก็บข้อมูลไว้ ให้ดาวน์โหลด CSV ก่อน</p>
     <div class="row2">
-      <button class="no" id="cNo">ยกเลิก</button>
-      <button class="yes" id="cYes">ลบรายการ</button>
+      <button class="no" id="delNo">ยกเลิก</button>
+      <button class="yes" id="delYes">ลบรายการ</button>
     </div>
   </div>
 </div>
@@ -223,11 +223,11 @@ function askDelete(key){
   confirmBox.classList.add("open");
 }
 const confirmBox = document.getElementById("confirm");
-cNo.onclick = ()=>{ pendingKey = null; confirmBox.classList.remove("open"); };
-confirmBox.onclick = e=>{ if(e.target === confirmBox) cNo.onclick(); };
-addEventListener("keydown", e=>{ if(e.key === "Escape" && confirmBox.classList.contains("open")) cNo.onclick(); });
+delNo.onclick = ()=>{ pendingKey = null; confirmBox.classList.remove("open"); };
+confirmBox.onclick = e=>{ if(e.target === confirmBox) delNo.onclick(); };
+addEventListener("keydown", e=>{ if(e.key === "Escape" && confirmBox.classList.contains("open")) delNo.onclick(); });
 
-cYes.onclick = async ()=>{
+delYes.onclick = async ()=>{
   if(!pendingKey) return;
   const key = pendingKey; pendingKey = null;
   confirmBox.classList.remove("open");
