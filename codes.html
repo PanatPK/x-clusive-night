@@ -79,10 +79,7 @@
 Michael Chen, Stiebel Eltron Asia"></textarea>
 
     <div class="opts">
-      <div class="opt"><label>คำนำหน้ารหัส</label><input id="prefix" value="EX-2026-"></div>
-      <div class="opt"><label>ความยาวรหัสสุ่ม</label>
-        <select id="len"><option value="4" selected>4 ตัว</option><option value="5">5 ตัว</option><option value="6">6 ตัว</option></select>
-      </div>
+      <div class="opt"><label>คำนำหน้ารหัส</label><input id="prefix" value="X-Night-"></div>
       <label class="chk"><input type="checkbox" id="useQR" checked> สร้าง QR ให้ด้วย</label>
       <label class="chk"><input type="checkbox" id="checkDB" checked> เช็คไม่ให้ซ้ำกับที่มีในระบบ</label>
     </div>
@@ -152,7 +149,7 @@ async function generate(){
 
   gen.disabled = true; say("กำลังสร้าง…");
   const taken = await existingCodes();
-  const n = Number(len.value), pre = prefix.value.trim();
+  const n = 3, pre = prefix.value.trim();
 
   list = people.map(p=>{
     let code, guard = 0;
