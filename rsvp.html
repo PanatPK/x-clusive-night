@@ -176,7 +176,7 @@
       </label>
 
       <button class="btn" id="submitBtn">ยืนยันการตอบรับ</button>
-      <p class="note">กรุณาตอบรับภายในวันที่ 25 กันยายน 2026<br>สอบถามเพิ่มเติม 09-8794-9262</p>
+      <p class="note">กรุณาตอบรับภายในวันที่ 25 กันยายน 2026</p>
     </div>
 
     <div id="done">
@@ -372,7 +372,7 @@ submitBtn.onclick = async ()=>{
         try{ const j = await r.clone().json(); if(j && j.name) existingKey = j.name; }catch(e){}
       }
       saved = r.ok;
-      if(!r.ok) showAlert("บันทึกไม่สำเร็จ (รหัส "+r.status+") กรุณาลองใหม่อีกครั้ง หรือโทร 09-8794-9262");
+      if(!r.ok) showAlert("บันทึกไม่สำเร็จ (รหัส "+r.status+") กรุณาลองใหม่อีกครั้ง");
     }catch(e){
       showAlert("เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาตรวจสอบสัญญาณอินเทอร์เน็ตแล้วลองใหม่");
     }
