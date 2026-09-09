@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ตอบรับคำเชิญ — THE EX-CLUSIVE NIGHT</title>
+<title>ตอบรับคำเชิญ — THE X-CLUSIVE NIGHT</title>
 <style>
   :root{
     --se-red:#BA0C2F; --ink:#111111; --ink-soft:#4A4A4A; --grey:#909195;
@@ -187,7 +187,7 @@
       </label>
 
       <button class="btn" id="submitBtn">ยืนยันการตอบรับ</button>
-      <p class="note">กรุณาตอบรับภายในวันที่ 25 กันยายน 2026<br></p>
+      <p class="note">กรุณาตอบรับภายในวันที่ 25 กันยายน 2026<br>สอบถามเพิ่มเติม 09-8794-9262</p>
     </div>
 
     <div id="done">
@@ -211,7 +211,7 @@
     </div>
   </main>
 
-  <footer>YOUR PRESENCE MAKES IT <u>EX-CLUSIVE</u>.</footer>
+  <footer>YOUR PRESENCE MAKES IT <u>X-CLUSIVE</u>.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -458,11 +458,11 @@ editBtn.onclick = ()=>{
 };
 
 icsBtn.onclick = ()=>{
-  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//QOOKID//EX-CLUSIVE NIGHT//TH","BEGIN:VEVENT",
+  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//QOOKID//X-CLUSIVE NIGHT//TH","BEGIN:VEVENT",
     "UID:exclusive-night-"+myCode+"@qookid.co.th",
     "DTSTAMP:"+new Date().toISOString().replace(/[-:.]/g,"").slice(0,15)+"Z",
     "DTSTART:20261006T110000Z","DTEND:20261006T153000Z",
-    "SUMMARY:STIEBEL ELTRON — THE EX-CLUSIVE NIGHT",
+    "SUMMARY:STIEBEL ELTRON — THE X-CLUSIVE NIGHT",
     "LOCATION:Renaissance Bangkok Ratchaprasong Hotel",
     "DESCRIPTION:Theme SMART CASUAL / Invitation code "+myCode,
     "END:VEVENT","END:VCALENDAR"].join("\r\n");
