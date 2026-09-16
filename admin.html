@@ -79,6 +79,30 @@
   .seatbox .no{background:#fff;border:1px solid var(--ink);color:var(--ink)}
   .seatbox .yes{background:var(--se-red);color:#fff}
 
+  .edt{border:1px solid var(--line);background:#fff;color:var(--grey);font-family:inherit;
+       font-size:9.5px;letter-spacing:.1em;padding:7px 10px;cursor:pointer;border-radius:2px;
+       white-space:nowrap;transition:all .18s}
+  .edt:hover{border-color:var(--ink);color:var(--ink)}
+
+  .editbox{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+           background:rgba(20,20,22,.45);padding:22px}
+  .editbox.open{display:flex}
+  .editbox .box{background:#fff;border:1px solid var(--line);max-width:460px;width:100%;padding:26px;
+                max-height:88vh;overflow:auto}
+  .editbox h3{margin:0 0 16px;font-size:13px;letter-spacing:.16em;font-weight:800}
+  .editbox label{display:block;font-size:9px;letter-spacing:.2em;color:var(--grey);margin:14px 0 6px}
+  .editbox input,.editbox textarea,.editbox select{width:100%;font-family:inherit;font-size:14.5px;
+        border:1px solid var(--line);padding:10px 11px;outline:none;border-radius:2px;background:#fff}
+  .editbox input:focus,.editbox textarea:focus,.editbox select:focus{border-color:var(--se-red)}
+  .editbox textarea{min-height:60px;resize:vertical}
+  .editbox .row2{display:flex;gap:9px;margin-top:22px}
+  .editbox button{flex:1;border:0;padding:13px;font-family:inherit;font-size:11px;font-weight:700;
+                  letter-spacing:.14em;cursor:pointer;border-radius:2px}
+  .editbox .no{background:#fff;border:1px solid var(--ink);color:var(--ink)}
+  .editbox .yes{background:var(--se-red);color:#fff}
+  .editbox .code{font-family:ui-monospace,monospace;font-size:13px;color:var(--se-red);
+                 background:#F7F7F8;padding:9px 11px;border:1px solid var(--line);margin-top:4px}
+
   .lnk{border:1px solid var(--line);background:#fff;color:var(--grey);font-family:inherit;
        font-size:9.5px;letter-spacing:.1em;padding:7px 10px;cursor:pointer;border-radius:2px;
        white-space:nowrap;transition:all .18s}
@@ -145,6 +169,26 @@
   </div>
 
   <div id="tableWrap"></div>
+</div>
+
+<div class="editbox" id="editbox">
+  <div class="box">
+    <h3>แก้ไขข้อมูลผู้ตอบรับ</h3>
+    <label>รหัสบัตร (แก้ไม่ได้)</label>
+    <div class="code" id="eCode">—</div>
+    <label>ชื่อ – นามสกุล</label><input id="eName" type="text">
+    <label>บริษัท / ตำแหน่ง</label><input id="eCompany" type="text">
+    <label>เบอร์โทรศัพท์</label><input id="ePhone" type="tel" inputmode="numeric">
+    <label>อีเมล</label><input id="eEmail" type="email">
+    <label>การเข้าร่วม</label>
+    <select id="eAttend"><option value="yes">เข้าร่วม</option><option value="no">ไม่สะดวกเข้าร่วม</option></select>
+    <label>โต๊ะ</label><input id="eTable" type="text" maxlength="8">
+    <label>อาหารที่แพ้ / หมายเหตุ</label><textarea id="eDiet"></textarea>
+    <div class="row2">
+      <button class="no" id="eNo">ยกเลิก</button>
+      <button class="yes" id="eYes">บันทึก</button>
+    </div>
+  </div>
 </div>
 
 <div class="seatbox" id="addbox">
@@ -276,6 +320,7 @@ function draw(){
                  placeholder="–" maxlength="8"></td>
       <td class="hidesm">${esc(r.diet||"–")}</td>
       <td class="act"><div class="acts">
+        <button class="edt" data-e="${r.key}">แก้ไข</button>
         <button class="lnk" data-l="${r.key}">คัดลอกลิงก์</button>
         ${r.attending==="yes"
           ? `<button class="chk ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button>`
@@ -286,6 +331,7 @@ function draw(){
 
   tableWrap.querySelectorAll(".chk").forEach(b=> b.onclick = ()=> toggleIn(b.dataset.k));
   tableWrap.querySelectorAll(".del").forEach(b=> b.onclick = ()=> askDelete(b.dataset.d));
+  tableWrap.querySelectorAll(".edt").forEach(b=> b.onclick = ()=> openEdit(b.dataset.e));
   tableWrap.querySelectorAll(".lnk").forEach(b=>{
     b.onclick = ()=>{
       const r = rows.find(x=>x.key===b.dataset.l); if(!r) return;
@@ -313,6 +359,52 @@ async function setTable(key, value){
     try{ await window.storage.set(key, JSON.stringify({...r, key:undefined})); }catch(e){}
   }
 }
+
+/* ---------- แก้ไขข้อมูลรายคน ---------- */
+const editbox = document.getElementById("editbox");
+let editKey = null;
+
+function openEdit(key){
+  const r = rows.find(x=>x.key===key); if(!r) return;
+  editKey = key;
+  eCode.textContent = r.code || "—";
+  eName.value    = r.name || "";
+  eCompany.value = r.company || "";
+  ePhone.value   = r.phone || "";
+  eEmail.value   = r.email || "";
+  eAttend.value  = (r.attending === "no") ? "no" : "yes";
+  eTable.value   = r.table || "";
+  eDiet.value    = r.diet || "";
+  editbox.classList.add("open");
+  eName.focus();
+}
+eNo.onclick = ()=>{ editKey = null; editbox.classList.remove("open"); };
+editbox.onclick = e=>{ if(e.target===editbox) eNo.onclick(); };
+
+eYes.onclick = async ()=>{
+  if(!editKey) return;
+  const r = rows.find(x=>x.key===editKey); if(!r) return;
+  const patch = {
+    name: eName.value.trim(),
+    company: eCompany.value.trim(),
+    phone: ePhone.value.trim(),
+    email: eEmail.value.trim(),
+    attending: eAttend.value,
+    table: eTable.value.trim(),
+    diet: eDiet.value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  Object.assign(r, patch);
+  editbox.classList.remove("open");
+  editKey = null;
+  draw();
+  if(DB.url){
+    try{ await fetch(q(DB.path+"/"+r.key), {method:"PATCH",headers:{"Content-Type":"application/json"},
+                                            body:JSON.stringify(patch)}); }catch(e){}
+  }else{
+    try{ await window.storage.set(r.key, JSON.stringify({...r, key:undefined})); }catch(e){}
+  }
+};
 
 /* ---------- เพิ่มรายชื่อทีละหลายคน ---------- */
 const ALPHA = "ACDEFGHJKLMNPQRTUVWXY34679";
