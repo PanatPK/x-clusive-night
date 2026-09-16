@@ -391,11 +391,11 @@ function tableCount(name, exceptKey){
 function tableOptions(current, exceptKey){
   let html = `<option value="">– เลือกโต๊ะ –</option>`;
   for(const t of TABLES){
-    const n = tableCount(t, exceptKey);
-    const full = n >= CAP;
+    const n    = tableCount(t);                    /* ตัวเลขที่โชว์ นับทุกคนรวมแถวนี้ด้วย */
+    const room = tableCount(t, exceptKey) >= CAP;  /* ตัดสินว่าเต็มไหม ไม่นับแถวที่กำลังเลือก */
     const sel  = (current === t) ? " selected" : "";
-    const dis  = (full && current !== t) ? " disabled" : "";
-    html += `<option value="${t}"${sel}${dis}>${t} (${n}/${CAP})${full?" เต็ม":""}</option>`;
+    const dis  = (room && current !== t) ? " disabled" : "";
+    html += `<option value="${t}"${sel}${dis}>${t} (${n}/${CAP})${n>=CAP?" เต็ม":""}</option>`;
   }
   return html;
 }
