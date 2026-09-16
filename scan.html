@@ -50,6 +50,9 @@
   .result .mark{font-size:52px;line-height:1;margin-bottom:6px}
   .result h2{margin:0;font-size:24px;font-weight:700}
   .result .meta{font-size:13px;opacity:.92;line-height:1.8;margin:0}
+  .result .table{display:none;margin-top:16px;padding:12px 26px;border:2px solid currentColor;
+                 border-radius:6px;font-size:15px;letter-spacing:.18em;font-weight:800}
+  .result .table b{display:block;font-size:34px;letter-spacing:.12em;margin-top:4px}
   .result .tag{font-size:9.5px;letter-spacing:.22em;opacity:.8;margin-bottom:10px}
   .result button{margin-top:20px;border:1.5px solid currentColor;background:transparent;color:inherit;
                  font-family:inherit;font-size:11px;letter-spacing:.16em;font-weight:700;padding:12px 26px;cursor:pointer}
@@ -107,13 +110,14 @@
       <p class="tag" id="rTag">CHECKED IN</p>
       <h2 id="rName">—</h2>
       <p class="meta" id="rMeta"></p>
+      <div class="table" id="rTable"></div>
       <button id="rNext">สแกนคนถัดไป</button>
     </div>
   </div>
 
   <div class="bottom">
     <div class="tools">
-      <input id="search" type="search" placeholder="ค้นหาชื่อ / บริษัท / รหัสบัตร">
+      <input id="search" type="search" placeholder="ค้นหาชื่อ / บริษัท / รหัสบัตร / โต๊ะ">
       <button id="refresh">รีเฟรช</button>
     </div>
     <div class="list" id="list"></div>
@@ -164,10 +168,10 @@ function paint(){
 function drawList(){
   const t = search.value.trim().toLowerCase();
   if(!t){ list.innerHTML = ""; return; }
-  const hits = rows.filter(r => [r.name,r.company,r.phone,r.code].join(" ").toLowerCase().includes(t)).slice(0,20);
+  const hits = rows.filter(r => [r.name,r.company,r.phone,r.code,r.table].join(" ").toLowerCase().includes(t)).slice(0,20);
   list.innerHTML = hits.length
     ? hits.map(r=>`<div><div><b>${esc(r.name||"-")}</b>
-        <small>${esc(r.company||"")} ${r.code?"· "+esc(r.code):""} · ${r.guests||1} ท่าน</small></div>
+        <small>${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}${r.table?' · <b style="color:#fff">โต๊ะ '+esc(r.table)+'</b>':" · ยังไม่ระบุโต๊ะ"}</small></div>
         <button class="go ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button></div>`).join("")
     : `<div class="none">ไม่พบรายชื่อที่ตรงกับคำค้น</div>`;
   list.querySelectorAll(".go").forEach(b=> b.onclick = ()=> checkIn(rows.find(r=>r.key===b.dataset.k)));
@@ -182,7 +186,7 @@ async function checkIn(rec){
     return show("dup","!","แจ้งไม่เข้าร่วม", esc(rec.name)+"<br>กรุณาตรวจสอบกับทีมงานก่อน");
   if(rec.checkedIn){
     const t = rec.checkedInAt ? new Date(rec.checkedInAt).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}) : "";
-    return show("dup","!","เช็คอินไปแล้ว", esc(rec.name)+(t?"<br>เวลา "+t:""));
+    return show("dup","!","เช็คอินไปแล้ว", esc(rec.name)+(t?"<br>เวลา "+t:""), rec.table);
   }
   rec.checkedIn = true;
   rec.checkedInAt = new Date().toISOString();
@@ -196,12 +200,15 @@ async function checkIn(rec){
     try{ await window.storage.set(rec.key, JSON.stringify({...rec, key:undefined})); }catch(e){}
   }
   show("ok","✓","ยินดีต้อนรับ",
-       esc(rec.name)+"<br>"+(rec.guests||1)+" ท่าน"+(rec.companion?" · "+esc(rec.companion):"")+
-       (rec.diet?'<br><span style="font-size:11px">แพ้อาหาร: '+esc(rec.diet)+'</span>':""));
+       esc(rec.name)+"<br>"+esc(rec.company||"")+
+       (rec.diet?'<br><span style="font-size:11px">แพ้อาหาร: '+esc(rec.diet)+'</span>':""),
+       rec.table);
 }
 
 /* ---------- แสดงผล ---------- */
-function show(type,mark,tag,meta){
+function show(type,mark,tag,meta,table){
+  rTable.style.display = table ? "block" : "none";
+  if(table) rTable.innerHTML = "TABLE<b>"+esc(table)+"</b>";
   busy = true;
   result.className = "result show "+type;
   rMark.textContent = mark; rTag.textContent = tag;

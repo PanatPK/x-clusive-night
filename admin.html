@@ -55,6 +55,30 @@
   .empty{background:#fff;border:1px solid var(--line);padding:50px 20px;text-align:center;color:var(--grey);font-size:13px;line-height:1.9}
   .setup{background:#FFF8E5;border:1px solid #F0D48A;padding:14px 16px;font-size:12px;line-height:1.8;margin-bottom:20px}
   .setup code{background:#fff;padding:2px 5px;border:1px solid var(--line);font-size:11.5px}
+  .tbl{width:74px;font-family:inherit;font-size:13px;font-weight:700;text-align:center;
+       border:1px solid var(--line);background:#fff;padding:7px 4px;border-radius:2px;outline:none;
+       color:var(--se-red);transition:border-color .18s}
+  .tbl:focus{border-color:var(--se-red)}
+  .tbl.empty{color:var(--grey);font-weight:400}
+
+  .seatbox{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+           background:rgba(20,20,22,.45);padding:22px}
+  .seatbox.open{display:flex}
+  .seatbox .box{background:#fff;border:1px solid var(--line);max-width:520px;width:100%;padding:26px;
+                max-height:86vh;overflow:auto}
+  .seatbox h3{margin:0 0 8px;font-size:13px;letter-spacing:.16em;font-weight:800}
+  .seatbox p{margin:0 0 4px;font-size:12.5px;line-height:1.8;color:var(--soft)}
+  .seatbox code{background:#F4F4F5;padding:2px 5px;border:1px solid var(--line);font-size:11.5px}
+  .seatbox textarea{width:100%;min-height:190px;font-family:inherit;font-size:13.5px;line-height:1.7;
+                    border:1px solid var(--line);padding:12px;margin-top:14px;outline:none;resize:vertical}
+  .seatbox textarea:focus{border-color:var(--se-red)}
+  .seatbox .res{font-size:12.5px;line-height:1.8;margin-top:12px}
+  .seatbox .row2{display:flex;gap:9px;margin-top:18px}
+  .seatbox button{flex:1;border:0;padding:13px;font-family:inherit;font-size:11px;font-weight:700;
+                  letter-spacing:.14em;cursor:pointer;border-radius:2px}
+  .seatbox .no{background:#fff;border:1px solid var(--ink);color:var(--ink)}
+  .seatbox .yes{background:var(--se-red);color:#fff}
+
   .del{border:1px solid var(--line);background:#fff;color:var(--grey);font-family:inherit;
        font-size:14px;line-height:1;padding:7px 10px;cursor:pointer;border-radius:2px;
        transition:all .18s}
@@ -109,10 +133,42 @@
       <button data-f="in" aria-pressed="false">เช็คอินแล้ว</button>
     </div>
     <button id="refresh">รีเฟรช</button>
-    <button class="red" id="csv">ดาวน์โหลด CSV</button>
+    <button id="addBtn">เพิ่มรายชื่อ</button>
+      <button id="seatBtn">นำเข้าผังที่นั่ง</button>
+      <button class="red" id="csv">ดาวน์โหลด CSV</button>
   </div>
 
   <div id="tableWrap"></div>
+</div>
+
+<div class="seatbox" id="addbox">
+  <div class="box">
+    <h3>เพิ่มรายชื่อเข้าระบบ</h3>
+    <p>วางข้อมูลบรรทัดละหนึ่งท่าน คั่นด้วยแท็บหรือจุลภาค — ก๊อปจาก Excel มาวางได้เลย</p>
+    <p><code>ชื่อ</code> · <code>บริษัท / ตำแหน่ง</code> · <code>เบอร์โทร</code> · <code>โต๊ะ</code> (ใส่หรือไม่ใส่ก็ได้)</p>
+    <p style="color:var(--grey)">ระบบจะสร้างรหัสบัตรใหม่ให้อัตโนมัติ ไม่ซ้ำกับที่มีอยู่</p>
+    <textarea id="addData" placeholder="สมชาย ใจดี, บจก. ตัวอย่าง / กรรมการ, 0812345678&#10;สมหญิง รักดี, บจก. ตัวอย่าง / ผู้จัดการ, 0898765432, A2"></textarea>
+    <div class="res" id="addRes"></div>
+    <div class="row2">
+      <button class="no" id="addNo">ปิด</button>
+      <button class="yes" id="addYes">เพิ่มรายชื่อ</button>
+    </div>
+  </div>
+</div>
+
+<div class="seatbox" id="seatbox">
+  <div class="box">
+    <h3>นำเข้าผังที่นั่ง</h3>
+    <p>วางข้อมูลบรรทัดละหนึ่งท่าน คั่นด้วยแท็บหรือจุลภาค — ก๊อปจาก Excel มาวางได้เลย</p>
+    <p><code>รหัสบัตร หรือ ชื่อ</code> แล้วตามด้วย <code>โต๊ะ</code></p>
+    <p style="color:var(--grey)">ตัวอย่าง<br>X-Night-K7Q, A1<br>สมชาย ใจดี, A1<br>สมหญิง รักดี, B3</p>
+    <textarea id="seatData" placeholder="X-Night-K7Q, A1&#10;สมชาย ใจดี, A2&#10;สมหญิง รักดี, B3"></textarea>
+    <div class="res" id="seatRes"></div>
+    <div class="row2">
+      <button class="no" id="seatNo">ปิด</button>
+      <button class="yes" id="seatYes">นำเข้า</button>
+    </div>
+  </div>
 </div>
 
 <div class="confirm" id="confirm">
@@ -204,12 +260,14 @@ function draw(){
 
   tableWrap.innerHTML = `<table><thead><tr>
     <th>ชื่อ – บริษัท</th><th class="hidesm">ติดต่อ</th><th>สถานะ</th><th>ท่าน</th>
-    <th class="hidesm">อาหาร</th><th>เช็คอิน</th></tr></thead><tbody>` +
+    <th>โต๊ะ</th><th class="hidesm">อาหาร</th><th>เช็คอิน</th></tr></thead><tbody>` +
     list.map(r=>`<tr>
       <td><b>${esc(r.name||"-")}</b><span class="sub">${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}</span></td>
       <td class="hidesm">${esc(r.phone||"-")}<span class="sub">${esc(r.email||"")}</span></td>
       <td><span class="pill ${r.attending==="yes"?"yes":"no"}">${r.attending==="yes"?"เข้าร่วม":"ไม่สะดวก"}</span></td>
       <td>${r.attending==="yes" ? (r.guests||1) : "–"}${r.companion?`<span class="sub">${esc(r.companion)}</span>`:""}</td>
+      <td><input class="tbl ${r.table?"":"empty"}" data-t="${r.key}" value="${esc(r.table||"")}"
+                 placeholder="–" maxlength="8"></td>
       <td class="hidesm">${esc(r.diet||"–")}</td>
       <td class="act">${r.attending==="yes"
             ? `<button class="chk ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button>`
@@ -218,9 +276,106 @@ function draw(){
 
   tableWrap.querySelectorAll(".chk").forEach(b=> b.onclick = ()=> toggleIn(b.dataset.k));
   tableWrap.querySelectorAll(".del").forEach(b=> b.onclick = ()=> askDelete(b.dataset.d));
+  tableWrap.querySelectorAll(".tbl").forEach(inp=>{
+    inp.onchange = ()=> setTable(inp.dataset.t, inp.value.trim());
+    inp.onkeydown = e=>{ if(e.key==="Enter") inp.blur(); };
+  });
 }
 
 let pendingKey = null;
+
+/* ---------- ผังที่นั่ง ---------- */
+async function setTable(key, value){
+  const r = rows.find(x=>x.key===key); if(!r) return;
+  r.table = value;
+  if(DB.url){
+    try{ await fetch(q(DB.path+"/"+key), {method:"PATCH",headers:{"Content-Type":"application/json"},
+                                          body:JSON.stringify({table:value})}); }catch(e){}
+  }else{
+    try{ await window.storage.set(key, JSON.stringify({...r, key:undefined})); }catch(e){}
+  }
+}
+
+/* ---------- เพิ่มรายชื่อทีละหลายคน ---------- */
+const ALPHA = "ACDEFGHJKLMNPQRTUVWXY34679";
+const rand4 = ()=> Array.from({length:3},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
+
+const addbox = document.getElementById("addbox");
+addBtn.onclick = ()=>{ addRes.innerHTML=""; addbox.classList.add("open"); addData.focus(); };
+addNo.onclick  = ()=> addbox.classList.remove("open");
+addbox.onclick = e=>{ if(e.target===addbox) addNo.onclick(); };
+
+addYes.onclick = async ()=>{
+  const lines = addData.value.split("\n").map(x=>x.trim()).filter(Boolean);
+  if(!lines.length){ addRes.innerHTML = '<b style="color:var(--se-red)">ยังไม่ได้วางข้อมูล</b>'; return; }
+
+  addYes.disabled = true; addYes.textContent = "กำลังเพิ่ม…";
+  const taken = new Set(rows.map(r => (r.code||"").toUpperCase()));
+  let done = 0; const fail = [];
+
+  for(const line of lines){
+    const c = line.split(/\t|,/).map(x=>x.trim());
+    const name = c[0] || "";
+    if(name.length < 2){ fail.push(line); continue; }
+
+    let code, n = 0;
+    do{ code = "X-Night-" + rand4(); n++; }while(taken.has(code.toUpperCase()) && n < 500);
+    taken.add(code.toUpperCase());
+
+    const rec = {
+      code, name, company: c[1] || "", phone: c[2] || "", email: "",
+      attending: "yes", guests: 1, companion: "", diet: "",
+      table: c[3] || "", checkedIn: false, checkedInAt: "",
+      submittedAt: new Date().toISOString(), addedBy: "admin"
+    };
+
+    if(DB.url){
+      try{
+        const r = await fetch(q(DB.path), {method:"POST", headers:{"Content-Type":"application/json"},
+                                           body: JSON.stringify(rec)});
+        if(!r.ok){ fail.push(line); continue; }
+        const j = await r.json();
+        rows.unshift({key: j.name, ...rec});
+      }catch(e){ fail.push(line); continue; }
+    }else{
+      const k = "rsvp:"+code+":"+Date.now();
+      try{ await window.storage.set(k, JSON.stringify(rec)); }catch(e){}
+      rows.unshift({key:k, ...rec});
+    }
+    done++;
+  }
+
+  draw();
+  addYes.disabled = false; addYes.textContent = "เพิ่มรายชื่อ";
+  addRes.innerHTML = `<b style="color:var(--ok)">เพิ่มสำเร็จ ${done} รายชื่อ</b>` +
+    (fail.length ? `<br><b style="color:var(--se-red)">ไม่สำเร็จ ${fail.length} รายการ</b><br>` +
+      fail.slice(0,8).map(f=>"· "+esc(f)).join("<br>") : "");
+  if(done) addData.value = "";
+};
+
+const seatbox = document.getElementById("seatbox");
+seatBtn.onclick = ()=>{ seatRes.innerHTML=""; seatbox.classList.add("open"); seatData.focus(); };
+seatNo.onclick  = ()=> seatbox.classList.remove("open");
+seatbox.onclick = e=>{ if(e.target===seatbox) seatNo.onclick(); };
+
+seatYes.onclick = async ()=>{
+  const lines = seatData.value.split("\n").map(x=>x.trim()).filter(Boolean);
+  let done=0; const fail=[];
+  for(const line of lines){
+    const parts = line.split(/\t|,/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length < 2){ fail.push(line); continue; }
+    const key = parts[0], table = parts.slice(1).join(" ");
+    const r = rows.find(x => (x.code||"").toLowerCase() === key.toLowerCase())
+           || rows.find(x => (x.name||"").toLowerCase() === key.toLowerCase());
+    if(!r){ fail.push(line); continue; }
+    await setTable(r.key, table); done++;
+  }
+  draw();
+  seatRes.innerHTML = `<b style="color:var(--ok)">นำเข้าสำเร็จ ${done} รายการ</b>` +
+    (fail.length ? `<br><b style="color:var(--se-red)">ไม่พบ ${fail.length} รายการ</b><br>` +
+      fail.slice(0,8).map(f=>"· "+esc(f)).join("<br>") +
+      (fail.length>8 ? "<br>· และอีก "+(fail.length-8)+" รายการ" : "") : "");
+};
 
 const ADMIN_PIN = (window.EXN && window.EXN.adminPin) || "2610";
 const unlocked = ()=>{ try{ return sessionStorage.getItem("exn_admin")==="1"; }catch(e){ return false; } };
@@ -288,7 +443,7 @@ document.querySelectorAll("#filter button").forEach(b=>{
 refresh.onclick = load;
 
 csv.onclick = ()=>{
-  const head = ["code","name","company","phone","email","attending","guests","companion","diet","checkedIn","checkedInAt","submittedAt"];
+  const head = ["code","name","company","phone","email","attending","table","diet","checkedIn","checkedInAt","checkedInBy","submittedAt"];
   const body = rows.map(r => head.map(h => `"${String(r[h] ?? "").replace(/"/g,'""')}"`).join(","));
   const blob = new Blob(["\uFEFF"+head.join(",")+"\n"+body.join("\n")], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
