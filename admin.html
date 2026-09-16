@@ -79,11 +79,17 @@
   .seatbox .no{background:#fff;border:1px solid var(--ink);color:var(--ink)}
   .seatbox .yes{background:var(--se-red);color:#fff}
 
+  .lnk{border:1px solid var(--line);background:#fff;color:var(--grey);font-family:inherit;
+       font-size:9.5px;letter-spacing:.1em;padding:7px 10px;cursor:pointer;border-radius:2px;
+       white-space:nowrap;transition:all .18s}
+  .lnk:hover{border-color:var(--ink);color:var(--ink)}
+  .lnk.done{border-color:var(--ok);color:var(--ok)}
   .del{border:1px solid var(--line);background:#fff;color:var(--grey);font-family:inherit;
        font-size:14px;line-height:1;padding:7px 10px;cursor:pointer;border-radius:2px;
        transition:all .18s}
   .del:hover{border-color:var(--se-red);color:var(--se-red)}
-  td.act{white-space:nowrap;display:flex;gap:7px;align-items:center}
+  td.act{white-space:nowrap}
+  td.act .acts{display:flex;gap:7px;align-items:center}
 
   .confirm{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
            background:rgba(20,20,22,.45);padding:22px}
@@ -259,23 +265,34 @@ function draw(){
   }
 
   tableWrap.innerHTML = `<table><thead><tr>
-    <th>ชื่อ – บริษัท</th><th class="hidesm">ติดต่อ</th><th>สถานะ</th><th>ท่าน</th>
+    <th>ชื่อ – บริษัท</th><th class="hidesm">ติดต่อ</th><th>สถานะ</th>
     <th>โต๊ะ</th><th class="hidesm">อาหาร</th><th>เช็คอิน</th></tr></thead><tbody>` +
     list.map(r=>`<tr>
       <td><b>${esc(r.name||"-")}</b><span class="sub">${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}</span></td>
       <td class="hidesm">${esc(r.phone||"-")}<span class="sub">${esc(r.email||"")}</span></td>
       <td><span class="pill ${r.attending==="yes"?"yes":"no"}">${r.attending==="yes"?"เข้าร่วม":"ไม่สะดวก"}</span></td>
-      <td>${r.attending==="yes" ? (r.guests||1) : "–"}${r.companion?`<span class="sub">${esc(r.companion)}</span>`:""}</td>
       <td><input class="tbl ${r.table?"":"empty"}" data-t="${r.key}" value="${esc(r.table||"")}"
                  placeholder="–" maxlength="8"></td>
       <td class="hidesm">${esc(r.diet||"–")}</td>
-      <td class="act">${r.attending==="yes"
-            ? `<button class="chk ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button>`
-            : "–"}<button class="del" data-d="${r.key}" title="ลบรายการนี้">✕</button></td>
+      <td class="act"><div class="acts">
+        <button class="lnk" data-l="${r.key}">คัดลอกลิงก์</button>
+        ${r.attending==="yes"
+          ? `<button class="chk ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button>`
+          : `<span style="color:var(--grey)">–</span>`}
+        <button class="del" data-d="${r.key}" title="ลบรายการนี้">✕</button>
+      </div></td>
     </tr>`).join("") + `</tbody></table>`;
 
   tableWrap.querySelectorAll(".chk").forEach(b=> b.onclick = ()=> toggleIn(b.dataset.k));
   tableWrap.querySelectorAll(".del").forEach(b=> b.onclick = ()=> askDelete(b.dataset.d));
+  tableWrap.querySelectorAll(".lnk").forEach(b=>{
+    b.onclick = ()=>{
+      const r = rows.find(x=>x.key===b.dataset.l); if(!r) return;
+      navigator.clipboard.writeText(guestLink(r));
+      b.textContent = "คัดลอกแล้ว"; b.classList.add("done");
+      setTimeout(()=>{ b.textContent="คัดลอกลิงก์"; b.classList.remove("done"); }, 1600);
+    };
+  });
   tableWrap.querySelectorAll(".tbl").forEach(inp=>{
     inp.onchange = ()=> setTable(inp.dataset.t, inp.value.trim());
     inp.onkeydown = e=>{ if(e.key==="Enter") inp.blur(); };
@@ -430,6 +447,13 @@ async function toggleIn(key){
   }
 }
 
+/* ลิงก์บัตรเชิญเฉพาะบุคคล อิงจากที่อยู่ของหน้านี้ */
+function guestLink(r){
+  const base = location.href.replace(/admin\.html.*$/,"");
+  return base + "?code=" + encodeURIComponent(r.code||"") +
+         (r.name ? "&name=" + encodeURIComponent(r.name) : "");
+}
+
 const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
 
 search.oninput = e => { term = e.target.value; draw(); };
@@ -444,8 +468,9 @@ refresh.onclick = load;
 
 csv.onclick = ()=>{
   const head = ["code","name","company","phone","email","attending","table","diet","checkedIn","checkedInAt","checkedInBy","submittedAt"];
-  const body = rows.map(r => head.map(h => `"${String(r[h] ?? "").replace(/"/g,'""')}"`).join(","));
-  const blob = new Blob(["\uFEFF"+head.join(",")+"\n"+body.join("\n")], {type:"text/csv;charset=utf-8"});
+  const body = rows.map(r => head.map(h => `"${String(r[h] ?? "").replace(/"/g,'""')}"`).join(",")
+                              + ',"' + guestLink(r) + '"');
+  const blob = new Blob(["\uFEFF"+head.concat(["link"]).join(",")+"\n"+body.join("\n")], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "exclusive-night-rsvp-" + new Date().toISOString().slice(0,10) + ".csv";
