@@ -126,7 +126,7 @@
   <div class="cards">
     <div class="card"><em>ตอบกลับทั้งหมด</em><b id="cTotal">0</b></div>
     <div class="card hot"><em>ยืนยันเข้าร่วม</em><b id="cYes">0</b><div class="bar"><i id="barYes"></i></div></div>
-    <div class="card"><em>จำนวนแขกรวม</em><b id="cHead">0<small>ท่าน</small></b></div>
+    <div class="card"><em>จัดโต๊ะแล้ว</em><b id="cHead">0<small id="cHeadSub"></small></b><div class="bar"><i id="barSeat"></i></div></div>
     <div class="card"><em>เช็คอินหน้างาน</em><b id="cIn">0<small id="cInPct"></small></b><div class="bar"><i id="barIn"></i></div></div>
   </div>
 
@@ -237,11 +237,12 @@ async function load(){
 
 function stats(){
   const yes  = rows.filter(r => r.attending === "yes");
-  const head = yes.reduce((s,r) => s + (Number(r.guests)||1), 0);
+  const seated = yes.filter(r => (r.table||"").trim()).length;
   const ins  = rows.filter(r => r.checkedIn).length;
   cTotal.textContent = rows.length;
   cYes.textContent   = yes.length;
-  cHead.innerHTML    = head + '<small>ท่าน</small>';
+  cHead.innerHTML    = seated + '<small>' + (yes.length ? " / " + yes.length : "") + '</small>';
+  barSeat.style.width = yes.length ? (seated/yes.length*100)+"%" : "0";
   cIn.innerHTML      = ins + '<small>' + (yes.length ? " / " + yes.length : "") + '</small>';
   barYes.style.width = rows.length ? (yes.length/rows.length*100)+"%" : "0";
   barIn.style.width  = yes.length ? (ins/yes.length*100)+"%" : "0";

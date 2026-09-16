@@ -199,8 +199,10 @@ async function checkIn(rec){
   }else{
     try{ await window.storage.set(rec.key, JSON.stringify({...rec, key:undefined})); }catch(e){}
   }
+  const many = (Number(rec.guests)||1) > 1;
   show("ok","✓","ยินดีต้อนรับ",
        esc(rec.name)+"<br>"+esc(rec.company||"")+
+       (many?'<br><b style="font-size:15px">มาด้วยกัน '+(Number(rec.guests))+' ท่าน</b>':"")+
        (rec.diet?'<br><span style="font-size:11px">แพ้อาหาร: '+esc(rec.diet)+'</span>':""),
        rec.table);
 }
