@@ -189,7 +189,8 @@
         <em>ENTRY PASS — แสดงที่จุดลงทะเบียนหน้างาน</em>
         <div id="entryQR"></div>
         <p class="passcode" id="passCode">—</p>
-        <p>บันทึกภาพหน้าจอนี้ไว้ หรือเปิดลิงก์เดิมอีกครั้งในวันงาน<br>
+        <p><b style="color:var(--se-red)">กรุณาบันทึกภาพหน้าจอนี้ไว้</b><br>
+           หรือเก็บลิงก์นี้ไว้เปิดอีกครั้งในวันงาน<br>
            หากสแกนไม่ติด แจ้งรหัสด้านบนกับเจ้าหน้าที่ได้</p>
       </div>
 
@@ -269,7 +270,7 @@ function fillFrom(v){
     ? new Date(v.submittedAt).toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"})
     : "";
   noticeBox.innerHTML = "รหัสบัตรนี้ตอบรับไว้แล้ว" + (when ? " เมื่อ " + when : "") +
-    "<br>หากต้องการเปลี่ยนคำตอบหรือแก้ไขข้อมูล แก้ในฟอร์มด้านล่างแล้วกดยืนยันได้เลย ระบบจะอัปเดตทับรายการเดิม";
+    "<br>หากต้องการเปลี่ยนคำตอบหรือแก้ไขข้อมูล แก้ในฟอร์มด้านล่างแล้วกดยืนยันได้เลย";
   noticeBox.style.display = "block";
 
   fName.value    = v.name || "";
@@ -283,6 +284,8 @@ function fillFrom(v){
     if(b.dataset.val === want) b.click();
   });
   submitBtn.textContent = "อัปเดตข้อมูล";
+  /* เคยตอบรับแล้ว เปิดลิงก์เดิมให้เห็น Entry Pass ทันที ไม่ต้องกรอกซ้ำ */
+  renderDone(v, v.attending !== "no", v.code || myCode);
 }
 
 document.querySelectorAll("#attendChoice button").forEach(b=>{
@@ -379,33 +382,36 @@ submitBtn.onclick = async ()=>{
   }
   if(!saved){ submitBtn.disabled=false; submitBtn.textContent="ยืนยันการตอบรับ"; return; }
 
-  const yes = attending==="yes";
+  renderDone(record, attending==="yes", myCode);
+};
+
+/* ---------- แสดงหน้ายืนยันพร้อม Entry Pass ---------- */
+function renderDone(record, yes, code){
   doneTitle.textContent = yes ? "See you there" : "Until next time";
   doneSub.innerHTML = yes
-    ? `ขอบคุณ ${record.name}<br>เราได้บันทึกการตอบรับของท่านเรียบร้อยแล้ว<br>ทีมงานจะติดต่อยืนยันรายละเอียดอีกครั้งก่อนวันงาน`
-    : `ขอบคุณ ${record.name}<br>ที่แจ้งให้เราทราบ แล้วพบกันในโอกาสต่อไป`;
+    ? `ขอบคุณ ${esc(record.name)}<br>เราได้บันทึกการตอบรับของท่านเรียบร้อยแล้ว<br>ทีมงานจะติดต่อยืนยันรายละเอียดอีกครั้งก่อนวันงาน`
+    : `ขอบคุณ ${esc(record.name)}<br>ที่แจ้งให้เราทราบ แล้วพบกันในโอกาสต่อไป`;
   sealIcon.innerHTML = yes
     ? '<path d="M4 12.5 9.5 18 20 6.5" stroke-linecap="round" stroke-linejoin="round"/>'
     : '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01" stroke-linecap="round"/>';
   summary.innerHTML =
-    `<div><span>NAME</span><b>${record.name}</b></div>`+
-    (record.company ? `<div><span>COMPANY</span><b>${record.company}</b></div>` : "")+
-    `<div><span>PHONE</span><b>${record.phone}</b></div>`+
-    (record.diet ? `<div><span>DIET</span><b>${record.diet}</b></div>` : "")+
-    `<div><span>CODE</span><b>${myCode}</b></div>`;
+    `<div><span>NAME</span><b>${esc(record.name)}</b></div>`+
+    (record.company ? `<div><span>COMPANY</span><b>${esc(record.company)}</b></div>` : "")+
+    `<div><span>PHONE</span><b>${esc(record.phone||"")}</b></div>`+
+    (record.diet ? `<div><span>DIET</span><b>${esc(record.diet)}</b></div>` : "")+
+    `<div><span>CODE</span><b>${esc(code)}</b></div>`;
 
   ticket.style.display = yes ? "block" : "none";
-  codeOut.textContent = myCode; codeStrip.style.display = "flex";
+  codeOut.textContent = code; codeStrip.style.display = "flex";
   icsBtn.style.display = yes ? "block" : "none";
+
   if(yes){
     entryQR.innerHTML = "";
-    passCode.textContent = myCode;
-    /* เข้ารหัสเฉพาะรหัสบัตร ตัวอักษรอังกฤษล้วนและสั้น
-       ทำให้ QR ลายหยาบ กล้องจับติดง่ายกว่าการยัดชื่อภาษาไทยลงไป */
+    passCode.textContent = code;
     let made = false;
     if(window.QRCode){
       try{
-        new QRCode(entryQR,{text:myCode, width:168, height:168,
+        new QRCode(entryQR,{text:code, width:168, height:168,
                             colorDark:"#000000", colorLight:"#ffffff",
                             correctLevel:QRCode.CorrectLevel.H});
         made = !!entryQR.querySelector("canvas,img");
@@ -414,7 +420,7 @@ submitBtn.onclick = async ()=>{
     if(!made){
       entryQR.innerHTML = `<div style="width:168px;height:168px;display:grid;place-items:center;
         font-family:ui-monospace,monospace;font-size:17px;letter-spacing:.16em;color:#111;
-        text-align:center;line-height:1.6">${myCode}<br>
+        text-align:center;line-height:1.6">${esc(code)}<br>
         <span style="font-size:10px;letter-spacing:.1em;color:#888">แจ้งรหัสนี้กับเจ้าหน้าที่</span></div>`;
     }
   }
@@ -422,7 +428,9 @@ submitBtn.onclick = async ()=>{
   form.style.display = "none";
   done.style.display = "block";
   window.scrollTo({top:0,behavior:"smooth"});
-};
+}
+
+const esc = t => String(t??"").replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
 
 editBtn.onclick = ()=>{
   done.style.display="none"; form.style.display="block";
