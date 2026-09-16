@@ -231,12 +231,9 @@ if(CODE_FROM_URL){
   codeOut.textContent = CODE_FROM_URL;
   lookupByCode(CODE_FROM_URL);
 }else{
+  /* ลิงก์กลาง: ทุกครั้งที่กรอกคือคนใหม่เสมอ ไม่จำรหัสเดิมไว้ในเครื่อง
+     เพราะถ้าหลายคนกรอกจากเครื่องเดียวกัน จะได้รหัสซ้ำและทับข้อมูลกัน */
   codeStrip.style.display = "none";
-  /* เคยตอบรับจากเครื่องนี้แล้วหรือยัง */
-  let saved = null;
-  try{ saved = localStorage.getItem("exn_code"); }catch(e){}
-  if(saved){ myCode = saved; codeOut.textContent = saved;
-             codeStrip.style.display = "flex"; lookupByCode(saved); }
 }
 
 /* ---------- 2) ตามหารายการเดิมจากรหัส ---------- */
@@ -262,7 +259,7 @@ async function newCode(){
     }catch(e){}
   }
   let c, n = 0;
-  do{ c = "X-Night-" + rand4(); n++; }while(taken.has(c) && n < 500);
+  do{ c = "X-Night-" + rand4(); n++; }while(taken.has(c.toUpperCase()) && n < 500);
   return c;
 }
 
@@ -345,14 +342,14 @@ submitBtn.onclick = async ()=>{
   if(!myCode){
     myCode = await newCode();
     record.code = myCode;
-    try{ localStorage.setItem("exn_code", myCode); }catch(e){}
   }
 
   let saved = false;
   if(DB.url){
     try{
-      /* กันรหัสซ้ำ: เช็คอีกรอบก่อนบันทึกจริง เผื่อมีคนกรอกพร้อมกัน */
-      if(!existingKey){
+      /* อัปเดตทับได้เฉพาะบัตรเฉพาะบุคคลที่มีรหัสมาในลิงก์เท่านั้น
+         ถ้ามาจากลิงก์กลาง ให้สร้างรายการใหม่เสมอ */
+      if(!existingKey && CODE_FROM_URL){
         try{
           const all = await (await fetch(q(DB.path))).json() || {};
           for(const [k,v] of Object.entries(all))
