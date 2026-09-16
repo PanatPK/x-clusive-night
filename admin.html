@@ -450,7 +450,9 @@ async function toggleIn(key){
 
 /* ลิงก์บัตรเชิญเฉพาะบุคคล อิงจากที่อยู่ของหน้านี้ */
 function guestLink(r){
-  const base = location.href.replace(/admin\.html.*$/,"");
+  /* ตัดชื่อไฟล์ท้าย path ออกให้เหลือเฉพาะโฟลเดอร์ แล้วต่อด้วยรหัส
+     วิธีนี้ใช้ได้ไม่ว่าจะเปิดหน้านี้ด้วยที่อยู่แบบไหน */
+  const base = location.origin + location.pathname.replace(/[^/]*$/, "");
   return base + "?code=" + encodeURIComponent(r.code||"") +
          (r.name ? "&name=" + encodeURIComponent(r.name) : "");
 }
