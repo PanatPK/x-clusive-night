@@ -55,11 +55,12 @@
   .empty{background:#fff;border:1px solid var(--line);padding:50px 20px;text-align:center;color:var(--grey);font-size:13px;line-height:1.9}
   .setup{background:#FFF8E5;border:1px solid #F0D48A;padding:14px 16px;font-size:12px;line-height:1.8;margin-bottom:20px}
   .setup code{background:#fff;padding:2px 5px;border:1px solid var(--line);font-size:11.5px}
-  .tbl{width:74px;font-family:inherit;font-size:13px;font-weight:700;text-align:center;
+  .tbl{width:96px;font-family:inherit;font-size:13px;font-weight:700;text-align:center;
        border:1px solid var(--line);background:#fff;padding:7px 4px;border-radius:2px;outline:none;
-       color:var(--se-red);transition:border-color .18s}
+       color:var(--se-red);transition:border-color .18s;cursor:pointer}
   .tbl:focus{border-color:var(--se-red)}
   .tbl.empty{color:var(--grey);font-weight:400}
+  .seatinfo{font-size:11.5px;color:var(--grey);margin-left:auto;white-space:nowrap}
 
   .seatbox{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
            background:rgba(20,20,22,.45);padding:22px}
@@ -182,7 +183,7 @@
     <label>อีเมล</label><input id="eEmail" type="email">
     <label>การเข้าร่วม</label>
     <select id="eAttend"><option value="yes">เข้าร่วม</option><option value="no">ไม่สะดวกเข้าร่วม</option></select>
-    <label>โต๊ะ</label><input id="eTable" type="text" maxlength="8">
+    <label>โต๊ะ</label><select id="eTable"></select>
     <label>อาหารที่แพ้ / หมายเหตุ</label><textarea id="eDiet"></textarea>
     <div id="ePinWrap" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
       <label style="margin-top:0">รหัสผู้ดูแล</label>
@@ -203,7 +204,7 @@
     <p>วางข้อมูลบรรทัดละหนึ่งท่าน คั่นด้วยแท็บหรือจุลภาค — ก๊อปจาก Excel มาวางได้เลย</p>
     <p><code>ชื่อ</code> · <code>บริษัท / ตำแหน่ง</code> · <code>เบอร์โทร</code> · <code>โต๊ะ</code> (ใส่หรือไม่ใส่ก็ได้)</p>
     <p style="color:var(--grey)">ระบบจะสร้างรหัสบัตรใหม่ให้อัตโนมัติ ไม่ซ้ำกับที่มีอยู่</p>
-    <textarea id="addData" placeholder="สมชาย ใจดี, บจก. ตัวอย่าง / กรรมการ, 0812345678&#10;สมหญิง รักดี, บจก. ตัวอย่าง / ผู้จัดการ, 0898765432, A2"></textarea>
+    <textarea id="addData" placeholder="สมชาย ใจดี, บจก. ตัวอย่าง / กรรมการ, 0812345678&#10;สมหญิง รักดี, บจก. ตัวอย่าง / ผู้จัดการ, 0898765432, VIP 1"></textarea>
     <div class="res" id="addRes"></div>
     <div class="row2">
       <button class="no" id="addNo">ปิด</button>
@@ -217,8 +218,9 @@
     <h3>นำเข้าผังที่นั่ง</h3>
     <p>วางข้อมูลบรรทัดละหนึ่งท่าน คั่นด้วยแท็บหรือจุลภาค — ก๊อปจาก Excel มาวางได้เลย</p>
     <p><code>รหัสบัตร หรือ ชื่อ</code> แล้วตามด้วย <code>โต๊ะ</code></p>
-    <p style="color:var(--grey)">ตัวอย่าง<br>X-Night-K7Q, A1<br>สมชาย ใจดี, A1<br>สมหญิง รักดี, B3</p>
-    <textarea id="seatData" placeholder="X-Night-K7Q, A1&#10;สมชาย ใจดี, A2&#10;สมหญิง รักดี, B3"></textarea>
+    <p style="color:var(--grey)">ชื่อโต๊ะที่ใช้ได้ VIP 1, VIP 2 และ 1 ถึง 20 · โต๊ะละ 8 ท่าน</p>
+    <p style="color:var(--grey)">ตัวอย่าง<br>X-Night-K7Q, VIP 1<br>สมชาย ใจดี, 3<br>สมหญิง รักดี, 12</p>
+    <textarea id="seatData" placeholder="X-Night-K7Q, VIP 1&#10;สมชาย ใจดี, 3&#10;สมหญิง รักดี, 12"></textarea>
     <div class="res" id="seatRes"></div>
     <div class="row2">
       <button class="no" id="seatNo">ปิด</button>
@@ -322,8 +324,7 @@ function draw(){
       <td><b>${esc(r.name||"-")}</b><span class="sub">${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}</span></td>
       <td class="hidesm">${esc(r.phone||"-")}<span class="sub">${esc(r.email||"")}</span></td>
       <td><span class="pill ${r.attending==="yes"?"yes":"no"}">${r.attending==="yes"?"เข้าร่วม":"ไม่สะดวก"}</span></td>
-      <td><input class="tbl ${r.table?"":"empty"}" data-t="${r.key}" value="${esc(r.table||"")}"
-                 placeholder="–" maxlength="8"></td>
+      <td><select class="tbl ${r.table?"":"empty"}" data-t="${r.key}">${tableOptions(r.table||"", r.key)}</select></td>
       <td class="hidesm">${esc(r.diet||"–")}</td>
       <td class="act"><div class="acts">
         <button class="edt" data-e="${r.key}">แก้ไข</button>
@@ -346,9 +347,17 @@ function draw(){
       setTimeout(()=>{ b.textContent="คัดลอกลิงก์"; b.classList.remove("done"); }, 1600);
     };
   });
-  tableWrap.querySelectorAll(".tbl").forEach(inp=>{
-    inp.onchange = ()=> setTable(inp.dataset.t, inp.value.trim());
-    inp.onkeydown = e=>{ if(e.key==="Enter") inp.blur(); };
+  tableWrap.querySelectorAll(".tbl").forEach(sel=>{
+    sel.onchange = ()=>{
+      const v = sel.value;
+      if(v && tableCount(v, sel.dataset.t) >= CAP){
+        alert("โต๊ะ " + v + " เต็มแล้ว (" + CAP + " ท่าน)\nกรุณาเลือกโต๊ะอื่น");
+        const r = rows.find(x=>x.key===sel.dataset.t);
+        sel.value = r ? (r.table||"") : "";
+        return;
+      }
+      setTable(sel.dataset.t, v);
+    };
   });
 }
 
@@ -358,12 +367,37 @@ let pendingKey = null;
 async function setTable(key, value){
   const r = rows.find(x=>x.key===key); if(!r) return;
   r.table = value;
+  draw();
   if(DB.url){
     try{ await fetch(q(DB.path+"/"+key), {method:"PATCH",headers:{"Content-Type":"application/json"},
                                           body:JSON.stringify({table:value})}); }catch(e){}
   }else{
     try{ await window.storage.set(key, JSON.stringify({...r, key:undefined})); }catch(e){}
   }
+}
+
+/* ---------- ผังโต๊ะ ----------
+   VIP 2 โต๊ะ และโต๊ะธรรมดา 1–20 รวม 22 โต๊ะ นั่งโต๊ะละ 8 ท่าน */
+const CAP = 8;
+const TABLES = ["VIP 1","VIP 2"].concat(Array.from({length:20},(_,i)=>String(i+1)));
+
+/* นับว่าโต๊ะนั้นมีคนแล้วกี่ท่าน (ไม่นับแถวที่กำลังแก้อยู่) */
+function tableCount(name, exceptKey){
+  if(!name) return 0;
+  return rows.filter(r => r.attending === "yes" && (r.table||"") === name && r.key !== exceptKey).length;
+}
+
+/* สร้างตัวเลือกโต๊ะ พร้อมบอกจำนวนที่นั่งคงเหลือ */
+function tableOptions(current, exceptKey){
+  let html = `<option value="">– เลือกโต๊ะ –</option>`;
+  for(const t of TABLES){
+    const n = tableCount(t, exceptKey);
+    const full = n >= CAP;
+    const sel  = (current === t) ? " selected" : "";
+    const dis  = (full && current !== t) ? " disabled" : "";
+    html += `<option value="${t}"${sel}${dis}>${t} (${n}/${CAP})${full?" เต็ม":""}</option>`;
+  }
+  return html;
 }
 
 /* ---------- รหัสผู้ดูแล ใช้ร่วมกันทั้งการแก้ไขและการลบ ---------- */
@@ -382,7 +416,8 @@ function openEdit(key){
   ePhone.value   = r.phone || "";
   eEmail.value   = r.email || "";
   eAttend.value  = (r.attending === "no") ? "no" : "yes";
-  eTable.value   = r.table || "";
+  eTable.innerHTML = tableOptions(r.table||"", r.key);
+  eTable.value = r.table || "";
   eDiet.value    = r.diet || "";
   ePinErr.style.display = "none";
   ePin.value = "";
@@ -400,13 +435,18 @@ eYes.onclick = async ()=>{
     return;
   }
   const r = rows.find(x=>x.key===editKey); if(!r) return;
+  const t = eTable.value;
+  if(t && tableCount(t, editKey) >= CAP){
+    alert("โต๊ะ " + t + " เต็มแล้ว (" + CAP + " ท่าน)\nกรุณาเลือกโต๊ะอื่น");
+    return;
+  }
   const patch = {
     name: eName.value.trim(),
     company: eCompany.value.trim(),
     phone: ePhone.value.trim(),
     email: eEmail.value.trim(),
     attending: eAttend.value,
-    table: eTable.value.trim(),
+    table: t,
     diet: eDiet.value.trim(),
     updatedAt: new Date().toISOString()
   };
@@ -451,7 +491,7 @@ addYes.onclick = async ()=>{
     const rec = {
       code, name, company: c[1] || "", phone: c[2] || "", email: "",
       attending: "yes", guests: 1, companion: "", diet: "",
-      table: c[3] || "", checkedIn: false, checkedInAt: "",
+      table: (c[3] && TABLES.includes(c[3].trim()) && tableCount(c[3].trim()) < CAP) ? c[3].trim() : "", checkedIn: false, checkedInAt: "",
       submittedAt: new Date().toISOString(), addedBy: "admin"
     };
 
@@ -490,10 +530,12 @@ seatYes.onclick = async ()=>{
   for(const line of lines){
     const parts = line.split(/\t|,/).map(x=>x.trim()).filter(Boolean);
     if(parts.length < 2){ fail.push(line); continue; }
-    const key = parts[0], table = parts.slice(1).join(" ");
+    const key = parts[0], table = parts.slice(1).join(" ").trim();
     const r = rows.find(x => (x.code||"").toLowerCase() === key.toLowerCase())
            || rows.find(x => (x.name||"").toLowerCase() === key.toLowerCase());
-    if(!r){ fail.push(line); continue; }
+    if(!r){ fail.push(line + "  (ไม่พบรายชื่อ)"); continue; }
+    if(table && !TABLES.includes(table)){ fail.push(line + "  (ไม่มีโต๊ะนี้)"); continue; }
+    if(table && tableCount(table, r.key) >= CAP){ fail.push(line + "  (โต๊ะเต็ม)"); continue; }
     await setTable(r.key, table); done++;
   }
   draw();
