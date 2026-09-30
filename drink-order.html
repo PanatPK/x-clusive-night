@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>สั่งเครื่องดื่ม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ============================================================
+   ตั้งค่าตรงนี้ที่เดียว
+   ============================================================ */
+const SHOP = {
+  name: 'ชื่อร้าน',            // ขึ้นหัวบิลและหน้าสั่ง
+  tables: 20,                 // จำนวนโต๊ะ (ใช้ตอนสร้าง QR)
+  currency: '฿',
+};
+
+// Firebase: สร้างโปรเจกต์ที่ console.firebase.google.com → เปิด Firestore → วาง config ที่นี่
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+// เมนู: แก้ได้เลย ราคาเป็นบาท ใส่ soldOut:true ถ้าของหมด
+const MENU = [
+  { cat: 'สเปเชียล', items: [
+    { id: 'sp1', name: 'ลิ้นจี่โซดาโรสแมรี่', price: 89, desc: 'หวานอมเปรี้ยว ซ่าเบา ๆ' },
+    { id: 'sp2', name: 'มะม่วงพาสชั่นฟรุต', price: 95, desc: 'ปั่นเนื้อมะม่วงสด' },
+    { id: 'sp3', name: 'กาแฟส้มยูสุ', price: 99, desc: 'เอสเพรสโซ่ + ยูสุ + โซดา' },
+  ]},
+  { cat: 'กาแฟ', items: [
+    { id: 'c1', name: 'อเมริกาโน่เย็น', price: 65 },
+    { id: 'c2', name: 'ลาเต้เย็น', price: 75 },
+    { id: 'c3', name: 'มอคค่าเย็น', price: 80 },
+  ]},
+  { cat: 'ไม่มีกาแฟ', items: [
+    { id: 'n1', name: 'ชาไทยเย็น', price: 60 },
+    { id: 'n2', name: 'โกโก้เย็น', price: 65 },
+    { id: 'n3', name: 'น้ำเปล่า', price: 15 },
+  ]},
+];
+</script>
+<style>
+:root{
+  --bg:#F7F8F6; --ink:#17221E; --ink-2:#5A6660; --line:#DDE3DF;
+  --brand:#1E6B5C; --brand-ink:#FFFFFF; --soft:#E6F1EE;
+  --warn:#B3261E; --ok:#2E7D32; --card:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Anuphan',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.5}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;background:#fff}
+.hidden{display:none!important}
+.muted{color:var(--ink-2)}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 120px}
+
+/* ---------- ลูกค้า ---------- */
+.top{padding:20px 0 6px}
+.top h1{margin:0;font-size:22px;font-weight:600}
+.top .table{font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.cat{margin:22px 0 8px;font-weight:600;color:var(--ink-2);font-size:15px}
+.item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.item.out{opacity:.45}
+.item .n{flex:1;min-width:0}
+.item .n b{font-weight:600;display:block}
+.item .n small{color:var(--ink-2)}
+.item .p{white-space:nowrap;font-weight:500}
+.qty{display:flex;align-items:center;gap:2px;background:var(--soft);border-radius:999px;padding:2px}
+.qty button{width:34px;height:34px;border-radius:999px;background:transparent;color:var(--brand);font-size:20px;font-weight:600}
+.qty button.add{background:var(--brand);color:#fff}
+.qty span{min-width:22px;text-align:center;font-weight:600}
+.note{margin-top:20px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line)}
+.bar .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar .sum{flex:1}
+.bar .sum b{font-size:18px}
+.primary{background:var(--brand);color:var(--brand-ink);padding:14px 22px;font-weight:600;font-size:16px}
+.primary:disabled{opacity:.4;cursor:default}
+.ghost{background:var(--soft);color:var(--brand);padding:12px 18px;font-weight:600}
+.done{text-align:center;padding:60px 0}
+.done .big{font-size:64px;font-weight:700;color:var(--brand);line-height:1}
+.pill{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--soft);color:var(--brand);font-weight:600;margin-top:12px}
+.pill.ok{background:#E3F2E4;color:var(--ok)}
+.msg{background:#FBEAE9;color:var(--warn);padding:12px 14px;border-radius:12px;margin:12px 0}
+
+/* ---------- บาร์ ---------- */
+.barwrap{padding:12px 16px 40px;max-width:1200px;margin:0 auto}
+.barhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.barhead h1{margin:0;font-size:20px;font-weight:600;flex:1}
+.status{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-2)}
+.dot{width:10px;height:10px;border-radius:50%;background:#C4CCC8}
+.dot.on{background:var(--ok)}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.col h2{font-size:15px;font-weight:600;color:var(--ink-2);margin:0 0 8px;display:flex;justify-content:space-between}
+.col h2 span{background:var(--soft);color:var(--brand);border-radius:999px;padding:0 10px;font-size:13px}
+.order{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.order.new{border-left-color:var(--warn)}
+.order.done{border-left-color:var(--ok)}
+.order .h{display:flex;align-items:baseline;gap:10px}
+.order .h .t{font-size:26px;font-weight:700;line-height:1}
+.order .h .no{color:var(--ink-2)}
+.order .h .ago{margin-left:auto;font-size:13px;color:var(--ink-2)}
+.order ul{list-style:none;padding:0;margin:8px 0}
+.order li{display:flex;gap:8px;padding:2px 0}
+.order li b{min-width:28px;color:var(--brand)}
+.order .nt{background:#FFF7E0;border-radius:8px;padding:6px 10px;font-size:14px;margin:6px 0}
+.order .acts{display:flex;gap:8px;margin-top:8px}
+.order .acts button{padding:9px 14px;font-weight:600;font-size:14px}
+.empty{color:var(--ink-2);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+
+/* ---------- QR ---------- */
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding:16px;max-width:1000px;margin:0 auto}
+.qrcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;page-break-inside:avoid}
+.qrcard .tn{font-size:28px;font-weight:700}
+.qrcard img,.qrcard canvas{margin:8px auto;display:block}
+.qrcard small{color:var(--ink-2)}
+@media print{.noprint{display:none}.qrcard{border-color:#999}}
+
+/* ---------- ตั้งค่า ---------- */
+.setup{max-width:560px;margin:40px auto;padding:0 16px}
+.setup code{background:#eee;padding:2px 6px;border-radius:6px}
+.setup ol{padding-left:20px}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#111614;--ink:#EEF2F0;--ink-2:#9AA7A1;--line:#2B3532;--card:#1A211E;--soft:#1F3A34;--brand:#3FA08A}
+  :root:not([data-theme="light"]) input,:root:not([data-theme="light"]) textarea{background:#1A211E}
+  :root:not([data-theme="light"]) .bar{background:#1A211E}
+  :root:not([data-theme="light"]) .order .nt{background:#3A3216}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   ส่วนกลาง
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const params = new URLSearchParams(location.search);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const money = n => SHOP.currency + n.toLocaleString('th-TH');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const findItem = id => MENU.flatMap(c => c.items).find(i => i.id === id);
+
+let db = null;
+if (FIREBASE_CONFIG.projectId) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+}
+
+function dayKey(d = new Date()) {
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+function timeStr(ts) {
+  const d = ts?.toDate ? ts.toDate() : new Date();
+  return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+function ago(ts) {
+  if (!ts?.toDate) return '';
+  const m = Math.round((Date.now() - ts.toDate().getTime()) / 60000);
+  return m < 1 ? 'เมื่อกี้' : m + ' นาที';
+}
+
+/* เลือกหน้า */
+if (!db) renderSetup();
+else if (params.has('bar')) renderBar();
+else if (params.has('qr')) renderQR();
+else renderCustomer();
+
+/* ============================================================
+   หน้าตั้งค่า (ยังไม่ได้ใส่ Firebase)
+   ============================================================ */
+function renderSetup() {
+  app.innerHTML = `
+  <div class="setup">
+    <h1>ยังไม่ได้ตั้งค่า</h1>
+    <p>เปิดไฟล์นี้แล้วใส่ค่า <code>FIREBASE_CONFIG</code> ด้านบนสุดก่อน</p>
+    <ol>
+      <li>ไปที่ console.firebase.google.com → สร้างโปรเจกต์</li>
+      <li>เมนู Build → Firestore Database → Create database (โหมด production)</li>
+      <li>แท็บ Rules ใส่กฎด้านล่างแล้วกด Publish</li>
+      <li>ไอคอนฟันเฟือง → Project settings → เลื่อนลง "Your apps" → เพิ่ม Web app → คัดลอก config มาวาง</li>
+    </ol>
+<pre style="background:#eee;padding:12px;border-radius:12px;overflow:auto">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /orders/{id} { allow read, create, update: if true; }
+    match /counters/{id} { allow read, write: if true; }
+  }
+}</pre>
+    <p class="muted">หลังใส่ค่าแล้ว: หน้าสั่งคือ <code>?table=1</code> จอบาร์คือ <code>?bar</code> สร้าง QR ที่ <code>?qr</code></p>
+  </div>`;
+}
+
+/* ============================================================
+   หน้าลูกค้า
+   ============================================================ */
+function renderCustomer() {
+  let table = params.get('table');
+  if (!table) {
+    app.innerHTML = `<div class="wrap"><div class="top"><h1>${esc(SHOP.name)}</h1></div>
+      <p>คุณนั่งโต๊ะไหน</p><input id="tb" inputmode="numeric" placeholder="เลขโต๊ะ">
+      <p><button class="primary" id="go">ไปสั่งเครื่องดื่ม</button></p></div>`;
+    $('#go').onclick = () => { const v = $('#tb').value.trim(); if (v) location.search = '?table=' + encodeURIComponent(v); };
+    return;
+  }
+  const cart = {};
+  const total = () => Object.entries(cart).reduce((s, [id, q]) => s + findItem(id).price * q, 0);
+  const count = () => Object.values(cart).reduce((a, b) => a + b, 0);
+
+  app.innerHTML = `<div class="wrap">
+    <div class="top"><h1>${esc(SHOP.name)}</h1><div class="muted">โต๊ะ</div><div class="table">${esc(table)}</div></div>
+    <div id="menu"></div>
+    <div class="note"><textarea id="note" rows="2" placeholder="หมายเหตุ เช่น หวานน้อย ไม่ใส่น้ำแข็ง"></textarea></div>
+    <div id="err"></div>
+  </div>
+  <div class="bar"><div class="in"><div class="sum"><div class="muted" id="cnt">ยังไม่ได้เลือก</div><b id="tot"></b></div>
+    <button class="primary" id="send" disabled>สั่งเลย</button></div></div>`;
+
+  const menuEl = $('#menu');
+  function draw() {
+    menuEl.innerHTML = MENU.map(c => `<div class="cat">${esc(c.cat)}</div>` + c.items.map(i => `
+      <div class="item ${i.soldOut ? 'out' : ''}">
+        <div class="n"><b>${esc(i.name)}</b>${i.desc ? `<small>${esc(i.desc)}</small>` : ''}${i.soldOut ? '<small>หมด</small>' : ''}</div>
+        <div class="p">${money(i.price)}</div>
+        ${i.soldOut ? '' : `<div class="qty">
+          <button data-id="${i.id}" data-d="-1" aria-label="ลด" ${cart[i.id] ? '' : 'style="visibility:hidden"'}>−</button>
+          <span>${cart[i.id] || ''}</span>
+          <button class="add" data-id="${i.id}" data-d="1" aria-label="เพิ่ม">+</button></div>`}
+      </div>`).join('')).join('');
+    const n = count();
+    $('#cnt').textContent = n ? n + ' แก้ว' : 'ยังไม่ได้เลือก';
+    $('#tot').textContent = n ? money(total()) : '';
+    $('#send').disabled = !n;
+  }
+  menuEl.addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]'); if (!b) return;
+    const id = b.dataset.id, d = +b.dataset.d;
+    cart[id] = Math.max(0, (cart[id] || 0) + d); if (!cart[id]) delete cart[id];
+    draw();
+  });
+  draw();
+
+  $('#send').onclick = async () => {
+    const btn = $('#send'); btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+    $('#err').innerHTML = '';
+    try {
+      const items = Object.entries(cart).map(([id, qty]) => { const it = findItem(id); return { id, name: it.name, price: it.price, qty }; });
+      const key = dayKey();
+      const no = await db.runTransaction(async tx => {
+        const ref = db.collection('counters').doc(key);
+        const snap = await tx.get(ref);
+        const next = (snap.exists ? snap.data().n : 0) + 1;
+        tx.set(ref, { n: next });
+        return next;
+      });
+      const doc = await db.collection('orders').add({
+        no, table: String(table), items, note: $('#note').value.trim(), total: total(),
+        status: 'new', printed: false, day: key,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showDone(doc.id, no);
+    } catch (e) {
+      $('#err').innerHTML = `<div class="msg">ส่งไม่สำเร็จ ลองอีกครั้ง หรือบอกพนักงานได้เลย<br><small>${esc(e.message)}</small></div>`;
+      btn.disabled = false; btn.textContent = 'สั่งเลย';
+    }
+  };
+
+  function showDone(id, no) {
+    app.innerHTML = `<div class="wrap"><div class="done">
+      <div class="muted">รับออเดอร์แล้ว โต๊ะ ${esc(table)}</div>
+      <div class="big">#${no}</div>
+      <div class="pill" id="st">รอบาร์รับ</div>
+      <p class="muted" style="margin-top:28px">หน้านี้จะอัปเดตเองเมื่อเครื่องดื่มเสร็จ</p>
+      <p><button class="ghost" onclick="location.reload()">สั่งเพิ่ม</button></p>
+    </div></div>`;
+    db.collection('orders').doc(id).onSnapshot(s => {
+      const st = s.data()?.status, el = $('#st'); if (!el) return;
+      el.className = 'pill' + (st === 'done' ? ' ok' : '');
+      el.textContent = { new: 'รอบาร์รับ', doing: 'กำลังทำ', done: 'เสร็จแล้ว กำลังไปเสิร์ฟ', served: 'เสิร์ฟแล้ว' }[st] || st;
+    });
+  }
+}
+
+/* ============================================================
+   จอบาร์
+   ============================================================ */
+let printer = null, autoPrint = true, inflight = new Set(), firstLoad = true;
+const BLE = [ // ปริ้นเตอร์จีน 58 มม. ส่วนใหญ่ใช้ชุดใดชุดหนึ่งต่อไปนี้
+  { s: '000018f0-0000-1000-8000-00805f9b34fb', c: '00002af1-0000-1000-8000-00805f9b34fb' },
+  { s: '49535343-fe7d-4ae5-8fa9-9fafd205e455', c: '49535343-8841-43f4-a8d4-ecbe34729bb3' },
+  { s: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', c: 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f' },
+  { s: '0000ff00-0000-1000-8000-00805f9b34fb', c: '0000ff02-0000-1000-8000-00805f9b34fb' },
+];
+
+function renderBar() {
+  app.innerHTML = `<div class="barwrap">
+    <div class="barhead"><h1>${esc(SHOP.name)} · บาร์</h1>
+      <div class="status"><span class="dot" id="pdot"></span><span id="ptxt">ยังไม่ต่อปริ้นเตอร์</span></div>
+      <button class="ghost" id="connect">ต่อปริ้นเตอร์</button>
+      <button class="ghost" id="test">ทดสอบพิมพ์</button>
+      <label class="switch"><input type="checkbox" id="auto" checked> พิมพ์อัตโนมัติ</label>
+    </div>
+    <div class="cols">
+      <div class="col"><h2>ใหม่ <span id="cNew">0</span></h2><div id="lNew"></div></div>
+      <div class="col"><h2>กำลังทำ <span id="cDoing">0</span></h2><div id="lDoing"></div></div>
+      <div class="col"><h2>เสร็จ รอเสิร์ฟ <span id="cDone">0</span></h2><div id="lDone"></div></div>
+    </div></div>`;
+
+  $('#connect').onclick = connectPrinter;
+  $('#test').onclick = () => printOrder({ no: 0, table: 'ทดสอบ', items: [{ name: 'ลิ้นจี่โซดาโรสแมรี่', qty: 2 }, { name: 'อเมริกาโน่เย็น', qty: 1 }], note: 'หวานน้อย', createdAt: null }).catch(alert);
+  $('#auto').onchange = e => autoPrint = e.target.checked;
+  if (!navigator.bluetooth) $('#ptxt').textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth (ใช้ Chrome บน Android)';
+
+  const q = db.collection('orders').where('day', '==', dayKey()).orderBy('createdAt', 'asc');
+  q.onSnapshot(snap => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!firstLoad && snap.docChanges().some(c => c.type === 'added')) beep();
+    firstLoad = false;
+    drawCol('New', all.filter(o => o.status === 'new'));
+    drawCol('Doing', all.filter(o => o.status === 'doing'));
+    drawCol('Done', all.filter(o => o.status === 'done'));
+    if (autoPrint && printer) all.filter(o => o.status === 'new' && !o.printed && !inflight.has(o.id)).forEach(o => printAndMark(o));
+  }, e => alert('อ่านออเดอร์ไม่ได้: ' + e.message));
+  setInterval(() => document.querySelectorAll('[data-ago]').forEach(el => el.textContent = ago({ toDate: () => new Date(+el.dataset.ago) })), 30000);
+}
+
+function drawCol(name, list) {
+  $('#c' + name).textContent = list.length;
+  $('#l' + name).innerHTML = list.length ? list.map(o => `
+    <div class="order ${o.status}">
+      <div class="h"><div class="t">โต๊ะ ${esc(o.table)}</div><div class="no">#${o.no}</div>
+        <div class="ago" data-ago="${o.createdAt?.toDate ? o.createdAt.toDate().getTime() : Date.now()}">${ago(o.createdAt)}</div></div>
+      <ul>${o.items.map(i => `<li><b>${i.qty}×</b>${esc(i.name)}</li>`).join('')}</ul>
+      ${o.note ? `<div class="nt">${esc(o.note)}</div>` : ''}
+      <div class="acts">
+        ${o.status === 'new' ? `<button class="primary" onclick="setStatus('${o.id}','doing')">รับทำ</button>` : ''}
+        ${o.status === 'doing' ? `<button class="primary" onclick="setStatus('${o.id}','done')">เสร็จแล้ว</button>` : ''}
+        ${o.status === 'done' ? `<button class="primary" onclick="setStatus('${o.id}','served')">เสิร์ฟแล้ว</button>` : ''}
+        <button class="ghost" onclick="reprint('${o.id}')">${o.printed ? 'พิมพ์อีกครั้ง' : 'พิมพ์'}</button>
+      </div>
+    </div>`).join('') : '<div class="empty">ว่าง</div>';
+}
+window.setStatus = (id, status) => db.collection('orders').doc(id).update({ status });
+window.reprint = async id => {
+  const s = await db.collection('orders').doc(id).get();
+  try { await printOrder({ id, ...s.data() }); await s.ref.update({ printed: true }); } catch (e) { alert('พิมพ์ไม่ได้: ' + e.message); }
+};
+async function printAndMark(o) {
+  inflight.add(o.id);
+  try { await printOrder(o); await db.collection('orders').doc(o.id).update({ printed: true }); }
+  catch (e) { console.warn(e); }
+  finally { inflight.delete(o.id); }
+}
+function beep() {
+  try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(a.currentTime + .25); } catch {}
+}
+
+/* ---------- Bluetooth ---------- */
+async function connectPrinter() {
+  try {
+    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE.map(x => x.s) });
+    const server = await device.gatt.connect();
+    let ch = null;
+    for (const b of BLE) { try { ch = await (await server.getPrimaryService(b.s)).getCharacteristic(b.c); break; } catch {} }
+    if (!ch) for (const svc of await server.getPrimaryServices()) {
+      for (const c of await svc.getCharacteristics()) if (c.properties.write || c.properties.writeWithoutResponse) { ch = c; break; }
+      if (ch) break;
+    }
+    if (!ch) throw new Error('หาช่องส่งข้อมูลของปริ้นเตอร์ไม่เจอ');
+    printer = { device, ch };
+    device.addEventListener('gattserverdisconnected', () => { printer = null; printerUI(); });
+    printerUI();
+  } catch (e) { alert('ต่อไม่ได้: ' + e.message); }
+}
+function printerUI() {
+  $('#pdot').className = 'dot' + (printer ? ' on' : '');
+  $('#ptxt').textContent = printer ? 'ต่อแล้ว: ' + (printer.device.name || 'ปริ้นเตอร์') : 'ยังไม่ต่อปริ้นเตอร์';
+}
+async function send(bytes) {
+  if (!printer) throw new Error('ยังไม่ได้ต่อปริ้นเตอร์');
+  const CH = 100;
+  for (let i = 0; i < bytes.length; i += CH) {
+    const part = bytes.slice(i, i + CH);
+    if (printer.ch.properties.writeWithoutResponse) await printer.ch.writeValueWithoutResponse(part);
+    else await printer.ch.writeValue(part);
+    await sleep(15);
+  }
+}
+
+/* ---------- วาดบิลเป็นภาพ แล้วส่งแบบ raster (ภาษาไทยชัวร์) ---------- */
+const W = 384; // 58 มม. = 384 จุด
+function drawReceipt(o) {
+  const c = document.createElement('canvas'); c.width = W; c.height = 1200;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height); x.fillStyle = '#000';
+  const F = 'Anuphan, sans-serif'; let y = 10;
+  const line = (t, size, weight = 600, align = 'left') => { x.font = `${weight} ${size}px ${F}`; x.textAlign = align; x.fillText(t, align === 'center' ? W / 2 : align === 'right' ? W - 8 : 8, y + size); y += size * 1.35; };
+  const rule = () => { x.fillRect(8, y + 4, W - 16, 2); y += 14; };
+  const wrap = (t, size, weight, indent, maxW) => { x.font = `${weight} ${size}px ${F}`; x.textAlign = 'left'; let cur = '';
+    for (const ch of t) { if (x.measureText(cur + ch).width > maxW) { x.fillText(cur, indent, y + size); y += size * 1.3; cur = ch; } else cur += ch; }
+    x.fillText(cur, indent, y + size); y += size * 1.35; };
+
+  line(SHOP.name, 26, 700, 'center');
+  line(`#${o.no}   ${timeStr(o.createdAt)}`, 22, 500, 'center');
+  rule();
+  line('โต๊ะ ' + o.table, 56, 700, 'center');
+  rule();
+  for (const it of o.items) { x.font = `700 30px ${F}`; x.textAlign = 'left'; x.fillText(it.qty + '×', 8, y + 30); wrap(it.name, 30, 600, 64, W - 72); }
+  if (o.note) { rule(); wrap('หมายเหตุ: ' + o.note, 26, 600, 8, W - 16); }
+  y += 20;
+  const out = document.createElement('canvas'); out.width = W; out.height = Math.min(y, c.height);
+  out.getContext('2d').drawImage(c, 0, 0);
+  return out;
+}
+function rasterBytes(canvas) {
+  const h = canvas.height, d = canvas.getContext('2d').getImageData(0, 0, W, h).data, bpr = W / 8;
+  const chunks = [new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x00])]; // init, align left
+  for (let y0 = 0; y0 < h; y0 += 255) {
+    const rows = Math.min(255, h - y0), buf = new Uint8Array(8 + bpr * rows);
+    buf.set([0x1D, 0x76, 0x30, 0x00, bpr & 255, bpr >> 8, rows & 255, rows >> 8]);
+    for (let y = 0; y < rows; y++) for (let xx = 0; xx < W; xx++) {
+      const i = ((y0 + y) * W + xx) * 4, lum = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11;
+      if (lum < 128) buf[8 + y * bpr + (xx >> 3)] |= 0x80 >> (xx & 7);
+    }
+    chunks.push(buf);
+  }
+  chunks.push(new Uint8Array([0x1B, 0x64, 0x04])); // เลื่อนกระดาษ 4 บรรทัด
+  const n = chunks.reduce((s, b) => s + b.length, 0), all = new Uint8Array(n); let p = 0;
+  for (const b of chunks) { all.set(b, p); p += b.length; }
+  return all;
+}
+async function printOrder(o) { await document.fonts.ready; await send(rasterBytes(drawReceipt(o))); }
+
+/* ============================================================
+   สร้าง QR ต่อโต๊ะ
+   ============================================================ */
+function renderQR() {
+  const base = location.origin + location.pathname;
+  app.innerHTML = `<div class="noprint" style="padding:16px;max-width:1000px;margin:0 auto;display:flex;gap:10px;align-items:center">
+    <b>QR สำหรับโต๊ะ 1–${SHOP.tables}</b><span class="muted">${esc(base)}?table=…</span>
+    <button class="ghost" style="margin-left:auto" onclick="print()">พิมพ์ทั้งหมด</button></div><div class="qrgrid" id="g"></div>`;
+  const g = $('#g');
+  for (let t = 1; t <= SHOP.tables; t++) {
+    const card = document.createElement('div'); card.className = 'qrcard';
+    card.innerHTML = `<div class="tn">โต๊ะ ${t}</div><div class="q"></div><small>สแกนเพื่อสั่งเครื่องดื่ม</small>`;
+    g.appendChild(card);
+    new QRCode(card.querySelector('.q'), { text: `${base}?table=${t}`, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
+  }
+}
+</script>
+</body>
+</html>
