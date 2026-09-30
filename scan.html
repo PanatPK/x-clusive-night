@@ -145,7 +145,7 @@ async function load(){
       const r = await fetch(q(DB.path));
       const data = await r.json() || {};
       rows = Object.entries(data).map(([key,v]) => ({key, ...v}));
-      foot.textContent = "เชื่อมต่อแล้ว · " + rows.filter(r=>r.attending==="yes").length + " รายชื่อในระบบ";
+      foot.textContent = "เชื่อมต่อแล้ว · " + rows.filter(r=>r.attending==="yes" && !r.mergeTo).length + " รายชื่อในระบบ";
     }catch(e){ foot.textContent = "เชื่อมต่อฐานข้อมูลไม่ได้ — ตรวจสอบอินเทอร์เน็ต"; }
   }else{
     rows = [];
@@ -160,7 +160,7 @@ async function load(){
   paint();
 }
 function paint(){
-  cIn.textContent = rows.filter(r=>r.checkedIn).length;
+  cIn.textContent = rows.filter(r=>r.checkedIn && !r.mergeTo).length;
   drawList();
 }
 
@@ -168,7 +168,7 @@ function paint(){
 function drawList(){
   const t = search.value.trim().toLowerCase();
   if(!t){ list.innerHTML = ""; return; }
-  const hits = rows.filter(r => [r.name,r.company,r.phone,r.code,r.table].join(" ").toLowerCase().includes(t)).slice(0,20);
+  const hits = rows.filter(r => !r.mergeTo && [r.name,r.company,r.phone,r.code,r.table].join(" ").toLowerCase().includes(t)).slice(0,20);
   list.innerHTML = hits.length
     ? hits.map(r=>`<div><div><b>${esc(r.name||"-")}</b>
         <small>${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}${r.table?' · <b style="color:#fff">โต๊ะ '+esc(r.table)+'</b>':" · ยังไม่ระบุโต๊ะ"}</small></div>
@@ -372,8 +372,13 @@ function handle(text){
     try{ code = new URL(code).searchParams.get("code") || code; }catch(e){}
   }
   code = code.trim();
-  const rec = rows.find(r => (r.code||"").toUpperCase() === code.toUpperCase());
+  let rec = rows.find(r => (r.code||"").toUpperCase() === code.toUpperCase());
   if(!rec) return show("bad","✕","ไม่พบข้อมูล","รหัส "+esc(code)+"<br>ยังไม่ได้ลงทะเบียนหรือรหัสไม่ถูกต้อง");
+  /* รายชื่อซ้ำ: ถ้าเรคคอร์ดนี้ถูกรวมเข้ากับอีกรหัส ให้เช็คอินที่รหัสหลักแทน */
+  if(rec.mergeTo){
+    const main = rows.find(r => (r.code||"").toUpperCase() === String(rec.mergeTo).toUpperCase());
+    if(main) rec = main;
+  }
   checkIn(rec);
 }
 

@@ -49,6 +49,13 @@
   .pill{display:inline-block;font-size:9.5px;letter-spacing:.1em;padding:4px 9px;border:1px solid var(--line);border-radius:99px}
   .pill.yes{border-color:var(--se-red);color:var(--se-red)}
   .pill.no{color:var(--grey)}
+  tr.dup td{background:#FFF6DB}
+  tr.merged td{background:#F4F4F4;color:#9A9A9A}
+  tr.merged td b{color:#9A9A9A;text-decoration:line-through}
+  .pill.dup{border-color:#D99A00;color:#B37B00;background:#FFF1C9}
+  .pill.mrg{border-color:#9A9A9A;color:#777}
+  .mrg-btn{border:1px solid #D99A00;background:#FFF6DB;color:#8A5E00;font-family:inherit;font-size:10px;letter-spacing:.06em;padding:7px 10px;cursor:pointer;white-space:nowrap}
+  .dupnote{background:#FFF6DB;border:1px solid #F0D48A;padding:10px 14px;font-size:12px;margin-bottom:10px}
   .chk{border:1px solid var(--ink);background:#fff;font-family:inherit;font-size:10px;letter-spacing:.1em;
        padding:7px 11px;cursor:pointer;white-space:nowrap}
   .chk.done{background:var(--ok);border-color:var(--ok);color:#fff}
@@ -161,7 +168,7 @@
       <button data-f="all" aria-pressed="true">ทั้งหมด</button>
       <button data-f="yes" aria-pressed="false">เข้าร่วม</button>
       <button data-f="no" aria-pressed="false">ไม่สะดวก</button>
-      <button data-f="in" aria-pressed="false">เช็คอินแล้ว</button>
+      <button data-f="in" aria-pressed="false">เช็คอินแล้ว</button><button data-f="dup" aria-pressed="false">ชื่อซ้ำ</button>
     </div>
     <button id="refresh">รีเฟรช</button>
     <button id="addBtn">เพิ่มรายชื่อ</button>
@@ -288,9 +295,9 @@ async function load(){
 }
 
 function stats(){
-  const yes  = rows.filter(r => r.attending === "yes");
+  const yes  = rows.filter(r => r.attending === "yes" && !r.mergeTo);
   const seated = yes.filter(r => (r.table||"").trim()).length;
-  const ins  = rows.filter(r => r.checkedIn).length;
+  const ins  = rows.filter(r => r.checkedIn && !r.mergeTo).length;
   cTotal.textContent = rows.length;
   cYes.textContent   = yes.length;
   cHead.innerHTML    = seated + '<small>' + (yes.length ? " / " + yes.length : "") + '</small>';
@@ -300,13 +307,33 @@ function stats(){
   barIn.style.width  = yes.length ? (ins/yes.length*100)+"%" : "0";
 }
 
+/* ---------- ตรวจชื่อซ้ำ ----------
+   ถือว่าซ้ำเมื่อชื่อ-นามสกุลเหมือนกัน (ไม่สนคำนำหน้า ช่องว่าง ตัวพิมพ์) */
+function normName(n){ return String(n||"").replace(/^(คุณ|นาย|นาง|นางสาว|น\.ส\.|mr\.?|mrs\.?|ms\.?)\s*/i,"").replace(/\s+/g," ").trim().toLowerCase(); }
+function normPhone(p){ return String(p||"").replace(/\D/g,""); }
+function findDups(){
+  const yes = rows.filter(r => r.attending === "yes");
+  const groups = {};
+  yes.forEach(r=>{
+    const n = normName(r.name); if(!n) return;
+    const k1 = "n:"+n;
+    (groups[k1] = groups[k1]||new Set()).add(r.key);
+  });
+  const dupOf = {};
+  Object.values(groups).forEach(set=>{ if(set.size>1){ const arr=[...set]; arr.forEach(k=>{ dupOf[k] = (dupOf[k]||new Set()); arr.forEach(o=>{ if(o!==k) dupOf[k].add(o); }); }); } });
+  return dupOf; // key -> Set(keys ของอีกเรคคอร์ดที่ซ้ำ)
+}
+
 function draw(){
   stats();
+  const dupOf = findDups();
+  const dupPairs = Object.values(dupOf).length;
   const t = term.trim().toLowerCase();
   const list = rows.filter(r=>{
     if(filter==="yes" && r.attending!=="yes") return false;
     if(filter==="no"  && r.attending==="yes") return false;
     if(filter==="in"  && !r.checkedIn) return false;
+    if(filter==="dup" && !dupOf[r.key] && !r.mergeTo) return false;
     if(!t) return true;
     return [r.name,r.company,r.phone,r.code,r.email].join(" ").toLowerCase().includes(t);
   });
@@ -317,11 +344,14 @@ function draw(){
     return;
   }
 
-  tableWrap.innerHTML = `<table><thead><tr>
+  const openDups = rows.filter(r => dupOf[r.key] && !r.mergeTo && ![...dupOf[r.key]].some(k => (rows.find(x=>x.key===k)||{}).mergeTo === r.code)).length;
+  const note = openDups ? `<div class="dupnote">⚠ พบรายชื่อที่น่าจะซ้ำกัน ${openDups} รายการ (แถวสีเหลือง) — กด "รวมกับ…" ที่แถวใดแถวหนึ่งเพื่อรวมเป็นคนเดียว สแกน QR ใบไหนก็เช็คอินได้ ไม่ต้องลบ</div>` : "";
+  tableWrap.innerHTML = note + `<table><thead><tr>
     <th>ชื่อ – บริษัท</th><th class="hidesm">ติดต่อ</th><th>สถานะ</th>
     <th>โต๊ะ</th><th class="hidesm">อาหาร</th><th>เช็คอิน</th></tr></thead><tbody>` +
-    list.map(r=>`<tr>
-      <td><b>${esc(r.name||"-")}</b><span class="sub">${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}</span></td>
+    list.map(r=>`<tr class="${r.mergeTo?"merged":(dupOf[r.key]?"dup":"")}">
+      <td><b>${esc(r.name||"-")}</b><span class="sub">${esc(r.company||"")} ${r.code?"· "+esc(r.code):""}</span>
+        ${r.mergeTo?`<span class="pill mrg" style="margin-top:6px">รวมกับ ${esc(r.mergeTo)}</span>`:(dupOf[r.key]?`<span class="pill dup" style="margin-top:6px">ชื่อซ้ำ</span>`:"")}</td>
       <td class="hidesm">${esc(r.phone||"-")}<span class="sub">${esc(r.email||"")}</span></td>
       <td><span class="pill ${r.attending==="yes"?"yes":"no"}">${r.attending==="yes"?"เข้าร่วม":"ไม่สะดวก"}</span></td>
       <td><select class="tbl ${r.table?"":"empty"}" data-t="${r.key}">${tableOptions(r.table||"", r.key)}</select></td>
@@ -329,6 +359,7 @@ function draw(){
       <td class="act"><div class="acts">
         <button class="edt" data-e="${r.key}">แก้ไข</button>
         <button class="lnk" data-l="${r.key}">คัดลอกลิงก์</button>
+        ${r.mergeTo?`<button class="mrg-btn" data-um="${r.key}">ยกเลิกรวม</button>`:(dupOf[r.key]?`<button class="mrg-btn" data-m="${r.key}">รวมกับ…</button>`:"")}
         ${r.attending==="yes"
           ? `<button class="chk ${r.checkedIn?"done":""}" data-k="${r.key}">${r.checkedIn?"เช็คอินแล้ว":"เช็คอิน"}</button>`
           : `<span style="color:var(--grey)">–</span>`}
@@ -337,6 +368,8 @@ function draw(){
     </tr>`).join("") + `</tbody></table>`;
 
   tableWrap.querySelectorAll(".chk").forEach(b=> b.onclick = ()=> toggleIn(b.dataset.k));
+  tableWrap.querySelectorAll("[data-m]").forEach(b=> b.onclick = ()=> mergeDup(b.dataset.m, dupOf));
+  tableWrap.querySelectorAll("[data-um]").forEach(b=> b.onclick = ()=> unmerge(b.dataset.um));
   tableWrap.querySelectorAll(".del").forEach(b=> b.onclick = ()=> askDelete(b.dataset.d));
   tableWrap.querySelectorAll(".edt").forEach(b=> b.onclick = ()=> openEdit(b.dataset.e));
   tableWrap.querySelectorAll(".lnk").forEach(b=>{
@@ -363,6 +396,47 @@ function draw(){
 
 let pendingKey = null;
 
+/* ---------- รวมรายชื่อซ้ำ ----------
+   เรคคอร์ดที่ถูกรวมจะมี mergeTo = รหัสหลัก: หน้าสแกนจะเช็คอินให้รหัสหลักแทน
+   และไม่ถูกนับในสถิติ / ที่นั่ง / ลัคกี้ดรอว์ */
+async function patchRec(key, patch){
+  const r = rows.find(x=>x.key===key); if(!r) return;
+  Object.assign(r, patch);
+  if(DB.url){
+    try{ await fetch(q(DB.path+"/"+key), {method:"PATCH",headers:{"Content-Type":"application/json"},
+                                          body:JSON.stringify(patch)}); }catch(e){}
+  }else{
+    try{ await window.storage.set(key, JSON.stringify({...r, key:undefined})); }catch(e){}
+  }
+}
+async function mergeDup(key, dupOf){
+  const r = rows.find(x=>x.key===key); if(!r) return;
+  const others = [...(dupOf[key]||[])].map(k=>rows.find(x=>x.key===k)).filter(x=>x && !x.mergeTo);
+  if(!others.length) return alert("ไม่พบเรคคอร์ดที่จะรวมด้วย");
+  let main = others[0];
+  if(others.length>1){
+    const pick = prompt("รวมเข้ากับรหัสไหน?\n" + others.map(o=>o.code+"  "+o.name+"  "+(o.company||"")).join("\n"), others[0].code);
+    if(!pick) return; main = others.find(o=>o.code.toUpperCase()===pick.trim().toUpperCase()); if(!main) return alert("ไม่พบรหัส "+pick);
+  }
+  if(!confirm("รวม " + r.code + " (" + r.name + ")\nเข้ากับรหัสหลัก " + main.code + " (" + main.name + ")?\n\n• QR ทั้งสองใบใช้เช็คอินได้ เป็นคนเดียวกัน\n• ที่นั่ง/สถิติ/ลัคกี้ดรอว์ นับเฉพาะรหัสหลัก\n• ถ้าฝ่ายใดเช็คอินแล้ว จะย้ายไปที่รหัสหลัก")) return;
+  const patch = { mergeTo: main.code };
+  const mainPatch = {};
+  if(r.checkedIn && !main.checkedIn){ mainPatch.checkedIn = true; mainPatch.checkedInAt = r.checkedInAt||new Date().toISOString(); mainPatch.checkedInBy = r.checkedInBy||""; }
+  if(!(main.table||"").trim() && (r.table||"").trim()) mainPatch.table = r.table;
+  if(!(main.company||"").trim() && (r.company||"").trim()) mainPatch.company = r.company;
+  if(!(main.email||"").trim() && (r.email||"").trim()) mainPatch.email = r.email;
+  patch.table = ""; // เรคคอร์ดที่ถูกรวมไม่กินที่นั่ง
+  await patchRec(key, patch);
+  if(Object.keys(mainPatch).length) await patchRec(main.key, mainPatch);
+  draw();
+}
+async function unmerge(key){
+  const r = rows.find(x=>x.key===key); if(!r) return;
+  if(!confirm("ยกเลิกการรวม " + r.code + " (" + r.name + ") ให้กลับเป็นรายชื่อแยก?")) return;
+  await patchRec(key, { mergeTo: null });
+  draw();
+}
+
 /* ---------- ผังที่นั่ง ---------- */
 async function setTable(key, value){
   const r = rows.find(x=>x.key===key); if(!r) return;
@@ -384,7 +458,7 @@ const TABLES = ["VIP 1","VIP 2"].concat(Array.from({length:20},(_,i)=>String(i+1
 /* นับว่าโต๊ะนั้นมีคนแล้วกี่ท่าน (ไม่นับแถวที่กำลังแก้อยู่) */
 function tableCount(name, exceptKey){
   if(!name) return 0;
-  return rows.filter(r => r.attending === "yes" && (r.table||"") === name && r.key !== exceptKey).length;
+  return rows.filter(r => r.attending === "yes" && !r.mergeTo && (r.table||"") === name && r.key !== exceptKey).length;
 }
 
 /* สร้างตัวเลือกโต๊ะ พร้อมบอกจำนวนที่นั่งคงเหลือ */
