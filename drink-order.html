@@ -14,37 +14,31 @@
    ตั้งค่าตรงนี้ที่เดียว
    ============================================================ */
 const SHOP = {
-  name: 'ชื่อร้าน',            // ขึ้นหัวบิลและหน้าสั่ง
+  name: 'X-CLUSIVE NIGHT',      // ขึ้นหัวบิลและหน้าสั่ง
   tables: 20,                 // จำนวนโต๊ะ (ใช้ตอนสร้าง QR)
   currency: '฿',
 };
 
 // Firebase: สร้างโปรเจกต์ที่ console.firebase.google.com → เปิด Firestore → วาง config ที่นี่
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDkXK3jmYT7-gn6IhQq70eYV7_U2L8Ia88",
-  authDomain: "drink-order-368a7.firebaseapp.com",
-  projectId: "drink-order-368a7",
-  storageBucket: "drink-order-368a7.firebasestorage.app",
-  messagingSenderId: "307889058885",
-  appId: "1:307889058885:web:447c07c7ad5210eab7df2c"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
-// เมนู: แก้ได้เลย ราคาเป็นบาท ใส่ soldOut:true ถ้าของหมด
+// เมนู: แก้ได้เลย  img = ชื่อไฟล์รูป (วางไว้โฟลเดอร์เดียวกับไฟล์นี้ หรือใส่เป็น URL ก็ได้)
+// ไม่ใส่ price = ไม่แสดงราคา  ใส่ soldOut:true ถ้าของหมด
 const MENU = [
-  { cat: 'สเปเชียล', items: [
-    { id: 'sp1', name: 'ลิ้นจี่โซดาโรสแมรี่', price: 89, desc: 'หวานอมเปรี้ยว ซ่าเบา ๆ' },
-    { id: 'sp2', name: 'มะม่วงพาสชั่นฟรุต', price: 95, desc: 'ปั่นเนื้อมะม่วงสด' },
-    { id: 'sp3', name: 'กาแฟส้มยูสุ', price: 99, desc: 'เอสเพรสโซ่ + ยูสุ + โซดา' },
-  ]},
-  { cat: 'กาแฟ', items: [
-    { id: 'c1', name: 'อเมริกาโน่เย็น', price: 65 },
-    { id: 'c2', name: 'ลาเต้เย็น', price: 75 },
-    { id: 'c3', name: 'มอคค่าเย็น', price: 80 },
-  ]},
-  { cat: 'ไม่มีกาแฟ', items: [
-    { id: 'n1', name: 'ชาไทยเย็น', price: 60 },
-    { id: 'n2', name: 'โกโก้เย็น', price: 65 },
-    { id: 'n3', name: 'น้ำเปล่า', price: 15 },
+  { cat: 'Signature drinks', items: [
+    { id: 'd1', name: 'เมนู 1', desc: 'คำอธิบายสั้น ๆ', img: 'img/d1.jpg' },
+    { id: 'd2', name: 'เมนู 2', desc: '', img: 'img/d2.jpg' },
+    { id: 'd3', name: 'เมนู 3', desc: '', img: 'img/d3.jpg' },
+    { id: 'd4', name: 'เมนู 4', desc: '', img: 'img/d4.jpg' },
+    { id: 'd5', name: 'เมนู 5', desc: '', img: 'img/d5.jpg' },
+    { id: 'd6', name: 'เมนู 6', desc: '', img: 'img/d6.jpg' },
   ]},
 ];
 </script>
@@ -71,7 +65,8 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 .top h1{margin:0;font-size:22px;font-weight:600}
 .top .table{font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .cat{margin:22px 0 8px;font-weight:600;color:var(--ink-2);font-size:15px}
-.item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 10px;margin-bottom:8px}
+.item .im{width:72px;height:72px;border-radius:10px;background:var(--soft);flex:none;object-fit:cover;display:block}
 .item.out{opacity:.45}
 .item .n{flex:1;min-width:0}
 .item .n b{font-weight:600;display:block}
@@ -219,7 +214,7 @@ function renderCustomer() {
     return;
   }
   const cart = {};
-  const total = () => Object.entries(cart).reduce((s, [id, q]) => s + findItem(id).price * q, 0);
+  const total = () => Object.entries(cart).reduce((s, [id, q]) => s + (findItem(id).price || 0) * q, 0);
   const count = () => Object.values(cart).reduce((a, b) => a + b, 0);
 
   app.innerHTML = `<div class="wrap">
@@ -235,8 +230,9 @@ function renderCustomer() {
   function draw() {
     menuEl.innerHTML = MENU.map(c => `<div class="cat">${esc(c.cat)}</div>` + c.items.map(i => `
       <div class="item ${i.soldOut ? 'out' : ''}">
+        ${i.img ? `<img class="im" src="${esc(i.img)}" alt="" onerror="this.style.visibility='hidden'">` : ''}
         <div class="n"><b>${esc(i.name)}</b>${i.desc ? `<small>${esc(i.desc)}</small>` : ''}${i.soldOut ? '<small>หมด</small>' : ''}</div>
-        <div class="p">${money(i.price)}</div>
+        ${i.price ? `<div class="p">${money(i.price)}</div>` : ''}
         ${i.soldOut ? '' : `<div class="qty">
           <button data-id="${i.id}" data-d="-1" aria-label="ลด" ${cart[i.id] ? '' : 'style="visibility:hidden"'}>−</button>
           <span>${cart[i.id] || ''}</span>
@@ -244,7 +240,7 @@ function renderCustomer() {
       </div>`).join('')).join('');
     const n = count();
     $('#cnt').textContent = n ? n + ' แก้ว' : 'ยังไม่ได้เลือก';
-    $('#tot').textContent = n ? money(total()) : '';
+    $('#tot').textContent = n && total() ? money(total()) : '';
     $('#send').disabled = !n;
   }
   menuEl.addEventListener('click', e => {
@@ -259,7 +255,7 @@ function renderCustomer() {
     const btn = $('#send'); btn.disabled = true; btn.textContent = 'กำลังส่ง…';
     $('#err').innerHTML = '';
     try {
-      const items = Object.entries(cart).map(([id, qty]) => { const it = findItem(id); return { id, name: it.name, price: it.price, qty }; });
+      const items = Object.entries(cart).map(([id, qty]) => { const it = findItem(id); return { id, name: it.name, price: it.price || 0, qty }; });
       const key = dayKey();
       const no = await db.runTransaction(async tx => {
         const ref = db.collection('counters').doc(key);
@@ -326,9 +322,9 @@ function renderBar() {
   $('#auto').onchange = e => autoPrint = e.target.checked;
   if (!navigator.bluetooth) $('#ptxt').textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth (ใช้ Chrome บน Android)';
 
-  const q = db.collection('orders').where('day', '==', dayKey()).orderBy('createdAt', 'asc');
+  const q = db.collection('orders').where('day', '==', dayKey());
   q.onSnapshot(snap => {
-    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.no || 0) - (b.no || 0));
     if (!firstLoad && snap.docChanges().some(c => c.type === 'added')) beep();
     firstLoad = false;
     drawCol('New', all.filter(o => o.status === 'new'));
