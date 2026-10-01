@@ -20,7 +20,7 @@ const FIREBASE_CONFIG = {
 
 // เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
 const MENU = [
-  { id: 'd1', name: 'เมนู 1', desc: '', img: 'img/d1.jpg' },
+  { id: 'd1', name: 'THE PAUSE', desc: 'A soft, refreshing blend created for one simple moment — to slow down, reset, and enjoy the pause.', img: 'img/d1.jpg' },
   { id: 'd2', name: 'เมนู 2', desc: '', img: 'img/d2.jpg' },
   { id: 'd3', name: 'เมนู 3', desc: '', img: 'img/d3.jpg' },
   { id: 'd4', name: 'เมนู 4', desc: '', img: 'img/d4.jpg' },
