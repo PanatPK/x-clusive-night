@@ -9,37 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-/* ============================================================
-   ตั้งค่าตรงนี้ที่เดียว
-   ============================================================ */
-const SHOP = {
-  name: 'X-CLUSIVE NIGHT',
-  logo: '',                    // ปล่อยว่าง = ใช้โลโก้ X-CLUSIVE NIGHT ที่ฝังในไฟล์แล้ว
-  adminPin: '2610',            // PIN ปุ่มแอดมินบนจอบาร์
-};
-const TABLES = ['1', '2', 'VIP 1', 'VIP 2'].concat(Array.from({ length: 18 }, (_, i) => String(i + 5)));
-
-// Firebase: วาง config จาก Project settings → Your apps
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDkXK3jmYT7-gn6IhQq70eYV7_U2L8Ia88",
-  authDomain: "drink-order-368a7.firebaseapp.com",
-  projectId: "drink-order-368a7",
-  storageBucket: "drink-order-368a7.firebasestorage.app",
-  messagingSenderId: "307889058885",
-  appId: "1:307889058885:web:447c07c7ad5210eab7df2c"
-};
-
-// เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
-const MENU = [
-  { id: 'd1', name: 'เมนู 1', desc: '', img: 'img/d1.jpg' },
-  { id: 'd2', name: 'เมนู 2', desc: '', img: 'img/d2.jpg' },
-  { id: 'd3', name: 'เมนู 3', desc: '', img: 'img/d3.jpg' },
-  { id: 'd4', name: 'เมนู 4', desc: '', img: 'img/d4.jpg' },
-  { id: 'd5', name: 'เมนู 5', desc: '', img: 'img/d5.jpg' },
-  { id: 'd6', name: 'เมนู 6', desc: '', img: 'img/d6.jpg' },
-];
-</script>
+<script src="drink-config.js"></script>
 <style>
 :root{
   --bg:#FFFFFF; --ink:#000000; --ink-2:#808285; --line:#D9D9D9; --soft:#EDEDED; --card:#FFFFFF;
@@ -329,7 +299,7 @@ function renderBar() {
   $('#auto').onchange = e => autoPrint = e.target.checked;
   $('#testTxt').onclick = () => send(new TextEncoder().encode('\x1b@X-CLUSIVE NIGHT\nPRINTER TEST OK\n\n\n\n')).then(() => alert('ส่งแล้ว ' + (printer ? printer.ch.uuid : ''))).catch(e => alert(e.message));
   $('#rmode').onchange = e => localStorage.rmode = e.target.value;
-  $('#rmode').value = localStorage.rmode || 'gsv';
+  $('#rmode').value = localStorage.rmode || 'gsv'; localStorage.rmode = $('#rmode').value;
   $('#clear').onclick = clearAll;
   if (!navigator.bluetooth) $('#ptxt').textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth (ใช้ Chrome บน Android หรือ Bluefy บน iPad)';
 
@@ -405,12 +375,11 @@ function printerUI() {
 }
 async function send(bytes) {
   if (!printer) throw new Error('ยังไม่ได้ต่อปริ้นเตอร์');
-  const CH = 20; // ขนาดต่อแพ็กเก็ตที่ปริ้นเตอร์ BLE ทุกตัวรับได้
+  const CH = 100; // ค่าที่ทดสอบแล้วใช้ได้กับ AN581-C
   for (let i = 0; i < bytes.length; i += CH) {
     const part = bytes.slice(i, i + CH);
-    if (printer.ch.properties.write && printer.ch.writeValueWithResponse) await printer.ch.writeValueWithResponse(part);
-    else if (printer.ch.properties.writeWithoutResponse) { await printer.ch.writeValueWithoutResponse(part); await sleep(8); }
-    else await printer.ch.writeValue(part);
+    if (printer.ch.properties.writeWithoutResponse) await printer.ch.writeValueWithoutResponse(part); else await printer.ch.writeValue(part);
+    await sleep(20);
   }
 }
 
@@ -419,7 +388,7 @@ const W = 384;
 function drawReceipt(o) {
   const c = document.createElement('canvas'); c.width = W; c.height = 1400;
   const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height); x.fillStyle = '#000';
-  const F = 'Prompt, sans-serif'; let y = 10;
+  const F = 'Prompt, sans-serif'; let y = 60; // เว้นหัวบิล
   const line = (t, size, weight = 600, align = 'left') => { x.font = `${weight} ${size}px ${F}`; x.textAlign = align; x.fillText(t, align === 'center' ? W / 2 : 8, y + size); y += size * 1.35; };
   const rule = () => { x.fillRect(8, y + 4, W - 16, 2); y += 14; };
   const wrap = (t, size, weight, indent, maxW) => { x.font = `${weight} ${size}px ${F}`; x.textAlign = 'left'; let cur = '';
@@ -435,7 +404,7 @@ function drawReceipt(o) {
     if (it.note) wrap('» ' + it.note, 24, 400, 64, W - 72);
     y += 6;
   }
-  y += 20;
+  y += 70; // เว้นท้ายบิล
   const out = document.createElement('canvas'); out.width = W; out.height = Math.min(y, c.height);
   out.getContext('2d').drawImage(c, 0, 0); return out;
 }
@@ -451,7 +420,7 @@ function rasterBytes(canvas) {
     }
     chunks.push(buf);
   }
-  chunks.push(new Uint8Array([0x1B, 0x64, 0x04]));
+  chunks.push(new Uint8Array([0x1B, 0x4A, 0x40])); // เลื่อนกระดาษสั้น ๆ
   const all = new Uint8Array(chunks.reduce((s, b) => s + b.length, 0)); let p = 0;
   for (const b of chunks) { all.set(b, p); p += b.length; } return all;
 }
@@ -471,11 +440,9 @@ async function printOrder(o) {
   await document.fonts.ready;
   const c = drawReceipt(o);
   await send((localStorage.rmode || 'gsv') === 'escstar' ? escStarBytes(c) : rasterBytes(c));
-  await sleep(250);
-  // ดันข้อมูลท้ายบิลออกจากบัฟเฟอร์: เลื่อนกระดาษ + บรรทัดว่างให้ครบแพ็กเก็ต
-  const flush = new Uint8Array(40); flush.fill(0x0A); flush.set([0x1B, 0x4A, 0x60], 0);
-  await send(flush);
-  await sleep(250);
+  await sleep(300);
+  await send(new Uint8Array([0x1B, 0x4A, 0x40])); // เขียนสั้น ๆ อีกครั้งเพื่อดันส่วนท้ายที่ค้าง
+  await sleep(300);
 }
 
 /* ---------- สรุป ---------- */
