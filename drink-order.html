@@ -388,7 +388,7 @@ const W = 384;
 function drawReceipt(o) {
   const c = document.createElement('canvas'); c.width = W; c.height = 1400;
   const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height); x.fillStyle = '#000';
-  const F = 'Prompt, sans-serif'; let y = 60; // เว้นหัวบิล
+  const F = 'Prompt, sans-serif'; let y = 16; // เว้นหัวบิลนิดเดียว
   const line = (t, size, weight = 600, align = 'left') => { x.font = `${weight} ${size}px ${F}`; x.textAlign = align; x.fillText(t, align === 'center' ? W / 2 : 8, y + size); y += size * 1.35; };
   const rule = () => { x.fillRect(8, y + 4, W - 16, 2); y += 14; };
   const wrap = (t, size, weight, indent, maxW) => { x.font = `${weight} ${size}px ${F}`; x.textAlign = 'left'; let cur = '';
@@ -404,7 +404,7 @@ function drawReceipt(o) {
     if (it.note) wrap('» ' + it.note, 24, 400, 64, W - 72);
     y += 6;
   }
-  y += 180; // เว้นท้ายบิลให้พ้นแนวฉีก (ปรับได้ ~30 = 1 บรรทัด)
+  y += 260; // เว้นท้ายบิลให้พ้นแนวฉีก (ปรับได้ ~30 = 1 บรรทัด)
   const out = document.createElement('canvas'); out.width = W; out.height = Math.min(y, c.height);
   out.getContext('2d').drawImage(c, 0, 0); return out;
 }
@@ -420,7 +420,7 @@ function rasterBytes(canvas) {
     }
     chunks.push(buf);
   }
-  chunks.push(new Uint8Array([0x1B, 0x4A, 0x40])); // เลื่อนกระดาษสั้น ๆ
+
   const all = new Uint8Array(chunks.reduce((s, b) => s + b.length, 0)); let p = 0;
   for (const b of chunks) { all.set(b, p); p += b.length; } return all;
 }
@@ -441,7 +441,7 @@ async function printOrder(o) {
   const c = drawReceipt(o);
   await send((localStorage.rmode || 'gsv') === 'escstar' ? escStarBytes(c) : rasterBytes(c));
   await sleep(300);
-  await send(new Uint8Array([0x1B, 0x4A, 0x40])); // เขียนสั้น ๆ อีกครั้งเพื่อดันส่วนท้ายที่ค้าง
+  await send(new Uint8Array([0x1B, 0x40])); // เขียนสั้น ๆ อีกครั้งเพื่อดันส่วนท้ายที่ค้าง (ไม่เลื่อนกระดาษ)
   await sleep(300);
 }
 
