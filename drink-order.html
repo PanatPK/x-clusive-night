@@ -59,7 +59,7 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 
 /* โลโก้ */
 .logo{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0 10px;text-align:center}
-.logo img{max-width:230px;width:60%;height:auto;display:block}
+.logo img{max-width:280px;width:72%;height:auto;display:block}
 .logo .wm{font-weight:300;font-size:30px;letter-spacing:.06em;line-height:1;color:#000}
 .logo .wm b{font-weight:700;color:var(--red)}
 .logo .sub{font-size:11px;letter-spacing:.32em;color:var(--ink-2);margin-top:2px}
@@ -181,7 +181,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const findItem = id => MENU.find(i => i.id === id);
 const isVip = t => /vip/i.test(t);
 const tableLabel = t => isVip(t) ? t : 'โต๊ะ ' + t;
-const LOGO = `<div class="logo"><img src="${esc(SHOP.logo)}" alt="${esc(SHOP.name)}" onerror="this.outerHTML='<div class=&quot;wm&quot;><b>X</b>-CLUSIVE NIGHT</div>'"><div class="sub">STIEBEL ELTRON</div></div>`;
+const LOGO = `<div class="logo"><img src="${esc(SHOP.logo)}" alt="${esc(SHOP.name)}" onerror="this.outerHTML='<div class=&quot;wm&quot;><b>X</b>-CLUSIVE NIGHT</div>'"></div>`;
 const LOGO_SM = `<img src="${esc(SHOP.logo)}" alt="" onerror="this.outerHTML='<span class=&quot;wm&quot;><b>X</b>-CLUSIVE NIGHT</span>'">`;
 
 let db = null;
