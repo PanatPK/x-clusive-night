@@ -22,12 +22,12 @@ const TABLES = ['1', '2', 'VIP 1', 'VIP 2'].concat(Array.from({ length: 18 }, (_
 
 // Firebase: วาง config จาก Project settings → Your apps
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDkXK3jmYT7-gn6IhQq70eYV7_U2L8Ia88",
-  authDomain: "drink-order-368a7.firebaseapp.com",
-  projectId: "drink-order-368a7",
-  storageBucket: "drink-order-368a7.firebasestorage.app",
-  messagingSenderId: "307889058885",
-  appId: "1:307889058885:web:447c07c7ad5210eab7df2c"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
 // เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
@@ -311,7 +311,9 @@ function renderBar() {
     <div class="barhead"><h1><b>X</b>-CLUSIVE NIGHT · BAR</h1>
       <div class="status"><span class="dot" id="pdot"></span><span id="ptxt">ยังไม่ต่อปริ้นเตอร์</span></div>
       <button class="ghost" id="connect">ต่อปริ้นเตอร์</button>
-      <button class="ghost" id="test">ทดสอบพิมพ์</button>
+      <button class="ghost" id="testTxt">ทดสอบตัวอักษร</button>
+      <button class="ghost" id="test">ทดสอบบิล</button>
+      <select id="rmode" class="ghost" style="padding:9px 10px"><option value="gsv">โหมดภาพ A</option><option value="escstar">โหมดภาพ B</option></select>
       <label class="switch"><input type="checkbox" id="auto" checked> พิมพ์อัตโนมัติ</label>
       <a class="ghost" style="text-decoration:none" href="?report" target="_blank">สรุป</a>
       <button class="ghost redline" id="clear">ล้างออเดอร์ (ทดสอบ)</button>
@@ -325,6 +327,9 @@ function renderBar() {
   $('#connect').onclick = connectPrinter;
   $('#test').onclick = () => printOrder({ no: 0, table: 'VIP 1', items: [{ name: 'เมนูทดสอบ A', qty: 2, note: 'หวานน้อย' }, { name: 'เมนูทดสอบ B', qty: 1, note: '' }], createdAt: null }).catch(e => alert(e.message));
   $('#auto').onchange = e => autoPrint = e.target.checked;
+  $('#testTxt').onclick = () => send(new TextEncoder().encode('\x1b@X-CLUSIVE NIGHT\nPRINTER TEST OK\n\n\n\n')).then(() => alert('ส่งแล้ว ' + (printer ? printer.ch.uuid : ''))).catch(e => alert(e.message));
+  $('#rmode').onchange = e => localStorage.rmode = e.target.value;
+  $('#rmode').value = localStorage.rmode || 'gsv';
   $('#clear').onclick = clearAll;
   if (!navigator.bluetooth) $('#ptxt').textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth (ใช้ Chrome บน Android หรือ Bluefy บน iPad)';
 
@@ -396,14 +401,16 @@ async function connectPrinter() {
 }
 function printerUI() {
   $('#pdot').className = 'dot' + (printer ? ' on' : '');
-  $('#ptxt').textContent = printer ? 'ต่อแล้ว: ' + (printer.device.name || 'ปริ้นเตอร์') : 'ยังไม่ต่อปริ้นเตอร์';
+  $('#ptxt').textContent = printer ? 'ต่อแล้ว: ' + (printer.device.name || 'ปริ้นเตอร์') + ' · ' + printer.ch.uuid.slice(4, 8) + (printer.ch.properties.write ? ' W' : '') + (printer.ch.properties.writeWithoutResponse ? ' WNR' : '') : 'ยังไม่ต่อปริ้นเตอร์';
 }
 async function send(bytes) {
   if (!printer) throw new Error('ยังไม่ได้ต่อปริ้นเตอร์');
-  for (let i = 0; i < bytes.length; i += 100) {
-    const part = bytes.slice(i, i + 100);
-    if (printer.ch.properties.writeWithoutResponse) await printer.ch.writeValueWithoutResponse(part); else await printer.ch.writeValue(part);
-    await sleep(15);
+  const CH = 20; // ขนาดต่อแพ็กเก็ตที่ปริ้นเตอร์ BLE ทุกตัวรับได้
+  for (let i = 0; i < bytes.length; i += CH) {
+    const part = bytes.slice(i, i + CH);
+    if (printer.ch.properties.write && printer.ch.writeValueWithResponse) await printer.ch.writeValueWithResponse(part);
+    else if (printer.ch.properties.writeWithoutResponse) { await printer.ch.writeValueWithoutResponse(part); await sleep(8); }
+    else await printer.ch.writeValue(part);
   }
 }
 
@@ -448,7 +455,28 @@ function rasterBytes(canvas) {
   const all = new Uint8Array(chunks.reduce((s, b) => s + b.length, 0)); let p = 0;
   for (const b of chunks) { all.set(b, p); p += b.length; } return all;
 }
-async function printOrder(o) { await document.fonts.ready; await send(rasterBytes(drawReceipt(o))); }
+function escStarBytes(canvas) { // โหมด B: ESC * 24-dot column (รองรับกว้างกว่า)
+  const h = canvas.height, d = canvas.getContext('2d').getImageData(0, 0, W, h).data;
+  const dark = (x, y) => y < h && (d[(y * W + x) * 4] * .3 + d[(y * W + x) * 4 + 1] * .59 + d[(y * W + x) * 4 + 2] * .11) < 128;
+  const out = [0x1B, 0x40, 0x1B, 0x33, 24];
+  for (let y0 = 0; y0 < h; y0 += 24) {
+    out.push(0x1B, 0x2A, 33, W & 255, W >> 8);
+    for (let x = 0; x < W; x++) for (let k = 0; k < 3; k++) { let b = 0; for (let bit = 0; bit < 8; bit++) if (dark(x, y0 + k * 8 + bit)) b |= 0x80 >> bit; out.push(b); }
+    out.push(0x0A);
+  }
+  out.push(0x1B, 0x32, 0x0A, 0x0A, 0x0A, 0x0A);
+  return new Uint8Array(out);
+}
+async function printOrder(o) {
+  await document.fonts.ready;
+  const c = drawReceipt(o);
+  await send((localStorage.rmode || 'gsv') === 'escstar' ? escStarBytes(c) : rasterBytes(c));
+  await sleep(250);
+  // ดันข้อมูลท้ายบิลออกจากบัฟเฟอร์: เลื่อนกระดาษ + บรรทัดว่างให้ครบแพ็กเก็ต
+  const flush = new Uint8Array(40); flush.fill(0x0A); flush.set([0x1B, 0x4A, 0x60], 0);
+  await send(flush);
+  await sleep(250);
+}
 
 /* ---------- สรุป ---------- */
 async function renderReport() {
