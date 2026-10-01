@@ -10,12 +10,12 @@ const TABLES = ['1', '2', 'VIP 1', 'VIP 2'].concat(Array.from({ length: 18 }, (_
 
 // Firebase: วาง config จาก Project settings → Your apps
 const FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyDkXK3jmYT7-gn6IhQq70eYV7_U2L8Ia88",
+  authDomain: "drink-order-368a7.firebaseapp.com",
+  projectId: "drink-order-368a7",
+  storageBucket: "drink-order-368a7.firebasestorage.app",
+  messagingSenderId: "307889058885",
+  appId: "1:307889058885:web:447c07c7ad5210eab7df2c"
 };
 
 // เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
