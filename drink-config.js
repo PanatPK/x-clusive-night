@@ -20,10 +20,11 @@ const FIREBASE_CONFIG = {
 
 // เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
 const MENU = [
-  { id: 'd1', name: 'THE PAUSE', desc: 'A soft, refreshing blend created for one simple moment — to slow down, reset, and enjoy the pause. \n \n ตัวนี้จะเป็นฝั่ง soft / calm / refreshing สื่อ mood ของแคมเปญ It’s Time to Pause โดยตรง หน้าตาควรออก ใสหรือสี pale blush / soft peach ดูเบา สะอาด และสงบ อาจมี light foam บาง ๆ ด้านบนเพื่อเพิ่มความนุ่ม', img: 'img/d1.jpg' },
-  { id: 'd2', name: 'เมนู 2', desc: '', img: 'img/d2.jpg' },
-  { id: 'd3', name: 'เมนู 3', desc: '', img: 'img/d3.jpg' },
-  { id: 'd4', name: 'เมนู 4', desc: '', img: 'img/d4.jpg' },
-  { id: 'd5', name: 'เมนู 5', desc: '', img: 'img/d5.jpg' },
-  { id: 'd6', name: 'เมนู 6', desc: '', img: 'img/d6.jpg' },
+  { id: 'd1', name: 'THE PAUSE', desc: 'A soft, refreshing blend made for a moment to pause.\nGin / White Peach Syrup / Strawberry / Lychee Juice / Egg White', img: 'img/d1.jpg' },
+  { id: 'd2', name: 'X-CLUSIVE HOUR', desc: 'A bold, refined blend crafted for an X-clusive moment.\nLight Rum / Pineapple Juice / Cherry Berry Juice / Fresh Lime / Rose Syrup', img: 'img/d2.jpg' },
+  { id: 'd3', name: 'COSMOPOLITAN', desc: 'Bright, fruity, sweet and sour.\nVodka / Triple Sec / Cranberry Juice / Lime Juice / Sugar Syrup', img: 'img/d3.jpg' },
+  { id: 'd4', name: 'MAI TAI', desc: 'Tropical, fruity, sweet and citrusy.\nLight Rum / Amaretto / Orange Juice / Pineapple Juice / Lime Juice / Grenadine Syrup', img: 'img/d4.jpg' },
+  { id: 'd5', name: 'OLD FASHIONED', desc: 'Rich, smooth and timeless.\nBourbon Whiskey / Sugar / Angostura Bitter', img: 'img/d5.jpg' },
+  { id: 'd6', name: 'MOJITO', desc: 'Cool, refreshing and timeless.\nLight Rum / Fresh Lime / Sugar / Mint Leaves / Soda', img: 'img/d6.jpg' },
+  { id: 'd7', name: 'MARGARITA', desc: 'Crisp, zesty and refreshing.\nTequila / Triple Sec / Lime Juice / Simple Syrup', img: 'img/d7.jpg' },
 ];
