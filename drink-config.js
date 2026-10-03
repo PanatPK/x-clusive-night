@@ -6,7 +6,7 @@ const SHOP = {
   logo: '',                    // ปล่อยว่าง = ใช้โลโก้ X-CLUSIVE NIGHT ที่ฝังในไฟล์แล้ว
   adminPin: '2610',            // PIN ปุ่มแอดมินบนจอบาร์
 };
-const TABLES = ['1', '2', 'VIP 1', 'VIP 2'].concat(Array.from({ length: 18 }, (_, i) => String(i + 5)));
+const TABLES = Array.from({ length: 22 }, (_, i) => String(i + 1));
 
 // Firebase: วาง config จาก Project settings → Your apps
 const FIREBASE_CONFIG = {
