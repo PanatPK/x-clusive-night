@@ -91,7 +91,7 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
 .dot{width:10px;height:10px;border-radius:50%;background:#C4C4C4}
 .dot.on{background:var(--ok)}
-.switch{display:flex;align-items:center;gap:8px;font-size:14px}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 .col h2{font-size:14px;font-weight:500;color:var(--ink-2);margin:0 0 8px;display:flex;justify-content:space-between;letter-spacing:.04em}
 .col h2 span{background:var(--ink);color:#fff;border-radius:999px;padding:0 10px;font-size:12px}
@@ -321,7 +321,7 @@ function renderBar() {
       <button class="ghost" id="connect">ต่อปริ้นเตอร์</button>
       <button class="ghost" id="testTxt">ทดสอบตัวอักษร</button>
       <button class="ghost" id="test">ทดสอบบิล</button>
-      <select id="rmode" class="ghost" style="padding:9px 10px"><option value="gsv">โหมดภาพ A</option><option value="escstar">โหมดภาพ B</option></select>
+      <select id="rmode" class="ghost" style="padding:10px 12px;height:auto;line-height:inherit;border-radius:4px;background:#fff;-webkit-appearance:none;appearance:none;padding-right:28px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center"><option value="gsv">โหมดภาพ A</option><option value="escstar">โหมดภาพ B</option></select>
       <label class="switch"><input type="checkbox" id="auto" checked> พิมพ์อัตโนมัติ</label>
       <a class="ghost" style="text-decoration:none" href="?report" target="_blank">สรุป</a>
       <button class="ghost redline" id="clear">ล้างออเดอร์ (ทดสอบ)</button>
