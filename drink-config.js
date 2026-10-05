@@ -6,7 +6,7 @@ const SHOP = {
   logo: '',                    // ปล่อยว่าง = ใช้โลโก้ X-CLUSIVE NIGHT ที่ฝังในไฟล์แล้ว
   adminPin: '2610',            // PIN ปุ่มแอดมินบนจอบาร์
 };
-const TABLES = Array.from({ length: 22 }, (_, i) => String(i + 1));
+const TABLES = Array.from({ length: 21 }, (_, i) => String(i + 1));
 
 // Firebase: วาง config จาก Project settings → Your apps
 const FIREBASE_CONFIG = {
@@ -20,11 +20,11 @@ const FIREBASE_CONFIG = {
 
 // เมนู 6 รายการ  img = ไฟล์รูป (โฟลเดอร์ img ข้างไฟล์นี้ หรือ URL)  ใส่ soldOut:true ถ้าหมด
 const MENU = [
-  { id: 'd1', name: 'THE PAUSE', desc: 'A soft, refreshing blend made for a moment to pause.\n\n**Ingredients :**\nGin / White Peach Syrup / Strawberry / Lychee Juice / Egg White', img: 'img/d1.jpg' },
-  { id: 'd2', name: 'X-CLUSIVE HOUR', desc: 'A bold, refined blend crafted for an X-clusive moment.\n\n**Ingredients :**\nLight Rum / Pineapple Juice / Cherry Berry Juice / Fresh Lime / Rose Syrup', img: 'img/d2.jpg' },
-  { id: 'd3', name: 'COSMOPOLITAN', desc: 'Bright, fruity, sweet and sour.\n\n**Ingredients :**\nVodka / Triple Sec / Cranberry Juice / Lime Juice / Sugar Syrup', img: 'img/d3.jpg' },
-  { id: 'd4', name: 'MAI TAI', desc: 'Tropical, fruity, sweet and citrusy.\n\n**Ingredients :**\nLight Rum / Amaretto / Orange Juice / Pineapple Juice / Lime Juice / Grenadine Syrup', img: 'img/d4.jpg' },
+  { id: 'd1', name: 'THE PAUSE', desc: 'A soft, refreshing blend made for a moment to pause.\n\n**Ingredients :**\nGin / White Peach Syrup / Strawberry / Lychee Juice / Egg White', img: 'img/d1.jpg', nonAlc: true },
+  { id: 'd2', name: 'X-CLUSIVE HOUR', desc: 'A bold, refined blend crafted for an X-clusive moment.\n\n**Ingredients :**\nLight Rum / Pineapple Juice / Cherry Berry Juice / Fresh Lime / Rose Syrup', img: 'img/d2.jpg', nonAlc: true },
+  { id: 'd3', name: 'COSMOPOLITAN', desc: 'Bright, fruity, sweet and sour.\n\n**Ingredients :**\nVodka / Triple Sec / Cranberry Juice / Lime Juice / Sugar Syrup', img: 'img/d3.jpg', nonAlc: true },
+  { id: 'd4', name: 'MAI TAI', desc: 'Tropical, fruity, sweet and citrusy.\n\n**Ingredients :**\nLight Rum / Amaretto / Orange Juice / Pineapple Juice / Lime Juice / Grenadine Syrup', img: 'img/d4.jpg', nonAlc: true },
   { id: 'd5', name: 'OLD FASHIONED', desc: 'Rich, smooth and timeless.\n\n**Ingredients :**\nBourbon Whiskey / Sugar / Angostura Bitter', img: 'img/d5.jpg' },
   { id: 'd6', name: 'MOJITO', desc: 'Cool, refreshing and timeless.\n\n**Ingredients :**\nLight Rum / Fresh Lime / Sugar / Mint Leaves / Soda', img: 'img/d6.jpg' },
-  { id: 'd7', name: 'MARGARITA', desc: 'Crisp, zesty and refreshing.\n\n**Ingredients :**\nTequila / Triple Sec / Lime Juice / Simple Syrup', img: 'img/d7.jpg' },
+  { id: 'd7', name: 'MARGARITA', desc: 'Crisp, zesty and refreshing.\n\n**Ingredients :**\nTequila / Triple Sec / Lime Juice / Simple Syrup', img: 'img/d7.jpg', nonAlc: true },
 ];
