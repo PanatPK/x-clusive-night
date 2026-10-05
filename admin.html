@@ -461,8 +461,8 @@ async function setTable(key, value){
 
 /* ---------- ผังโต๊ะ ----------
    VIP 2 โต๊ะ และโต๊ะธรรมดา 1–20 รวม 22 โต๊ะ นั่งโต๊ะละ 8 ท่าน */
-const CAP = 8;
-const TABLES = Array.from({length:21},(_,i)=>String(i+1));  /* ผังล่าสุด: โต๊ะ 1–21 ไม่มี VIP */
+const CAP = 12;
+const TABLES = Array.from({length:14},(_,i)=>String(i+1));  /* ผังล่าสุด: โต๊ะ 1–14 โต๊ะละไม่เกิน 12 */
 
 /* นับว่าโต๊ะนั้นมีคนแล้วกี่ท่าน (ไม่นับแถวที่กำลังแก้อยู่) */
 function tableCount(name, exceptKey){
