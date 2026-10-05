@@ -345,7 +345,9 @@ function draw(){
   }
 
   const openDups = rows.filter(r => dupOf[r.key] && !r.mergeTo && ![...dupOf[r.key]].some(k => (rows.find(x=>x.key===k)||{}).mergeTo === r.code)).length;
-  const note = openDups ? `<div class="dupnote">⚠ พบรายชื่อที่น่าจะซ้ำกัน ${openDups} รายการ (แถวสีเหลือง) — กด "รวมกับ…" ที่แถวใดแถวหนึ่งเพื่อรวมเป็นคนเดียว สแกน QR ใบไหนก็เช็คอินได้ ไม่ต้องลบ</div>` : "";
+  const offPlan = rows.filter(r => r.attending==="yes" && !r.mergeTo && (r.table||"").trim() && !TABLES.includes((r.table||"").trim()));
+  const offNote = offPlan.length ? `<div class="dupnote" style="background:#FDECEC;border-color:#E8A0A0">⚠ มี ${offPlan.length} คนที่ยังอยู่โต๊ะเดิมซึ่งไม่อยู่ในผังใหม่ (${[...new Set(offPlan.map(r=>r.table))].join(", ")}) — เลือกโต๊ะใหม่ให้ทีละคน หรือ <button class="mrg-btn" id="clearOff">ล้างโต๊ะเหล่านี้ทั้งหมดเพื่อจัดใหม่</button></div>` : "";
+  const note = offNote + (openDups ? `<div class="dupnote">⚠ พบรายชื่อที่น่าจะซ้ำกัน ${openDups} รายการ (แถวสีเหลือง) — กด "รวมกับ…" ที่แถวใดแถวหนึ่งเพื่อรวมเป็นคนเดียว สแกน QR ใบไหนก็เช็คอินได้ ไม่ต้องลบ</div>` : "");
   tableWrap.innerHTML = note + `<table><thead><tr>
     <th>ชื่อ – บริษัท</th><th class="hidesm">ติดต่อ</th><th>สถานะ</th>
     <th>โต๊ะ</th><th class="hidesm">อาหาร</th><th>เช็คอิน</th></tr></thead><tbody>` +
@@ -370,6 +372,13 @@ function draw(){
   tableWrap.querySelectorAll(".chk").forEach(b=> b.onclick = ()=> toggleIn(b.dataset.k));
   tableWrap.querySelectorAll("[data-m]").forEach(b=> b.onclick = ()=> mergeDup(b.dataset.m, dupOf));
   tableWrap.querySelectorAll("[data-um]").forEach(b=> b.onclick = ()=> unmerge(b.dataset.um));
+  const co = document.getElementById("clearOff");
+  if(co) co.onclick = async ()=>{
+    const off = rows.filter(r => (r.table||"").trim() && !TABLES.includes((r.table||"").trim()));
+    if(!confirm("ล้างโต๊ะของ " + off.length + " คน (" + off.map(r=>r.name).join(", ") + ") เพื่อจัดใหม่?")) return;
+    for(const r of off){ await patchRec(r.key, { table: "" }); }
+    draw();
+  };
   tableWrap.querySelectorAll(".del").forEach(b=> b.onclick = ()=> askDelete(b.dataset.d));
   tableWrap.querySelectorAll(".edt").forEach(b=> b.onclick = ()=> openEdit(b.dataset.e));
   tableWrap.querySelectorAll(".lnk").forEach(b=>{
@@ -453,7 +462,7 @@ async function setTable(key, value){
 /* ---------- ผังโต๊ะ ----------
    VIP 2 โต๊ะ และโต๊ะธรรมดา 1–20 รวม 22 โต๊ะ นั่งโต๊ะละ 8 ท่าน */
 const CAP = 8;
-const TABLES = ["VIP 1","VIP 2"].concat(Array.from({length:20},(_,i)=>String(i+1)));
+const TABLES = Array.from({length:21},(_,i)=>String(i+1));  /* ผังล่าสุด: โต๊ะ 1–21 ไม่มี VIP */
 
 /* นับว่าโต๊ะนั้นมีคนแล้วกี่ท่าน (ไม่นับแถวที่กำลังแก้อยู่) */
 function tableCount(name, exceptKey){
@@ -464,6 +473,7 @@ function tableCount(name, exceptKey){
 /* สร้างตัวเลือกโต๊ะ พร้อมบอกจำนวนที่นั่งคงเหลือ */
 function tableOptions(current, exceptKey){
   let html = `<option value="">– เลือกโต๊ะ –</option>`;
+  if(current && !TABLES.includes(current)) html += `<option value="${current}" selected>${current} (ไม่อยู่ในผังใหม่ — เลือกใหม่)</option>`;
   for(const t of TABLES){
     const n    = tableCount(t);                    /* ตัวเลขที่โชว์ นับทุกคนรวมแถวนี้ด้วย */
     const room = tableCount(t, exceptKey) >= CAP;  /* ตัดสินว่าเต็มไหม ไม่นับแถวที่กำลังเลือก */
