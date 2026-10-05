@@ -72,6 +72,11 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 .m.has .qty button.add{background:var(--red)}
 .qty span{font-weight:600;min-width:20px;text-align:center}
 .m textarea{font-size:13px;padding:7px 9px;resize:none;border-radius:4px}
+.m .na{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;font-weight:500;border:1.5px solid var(--line);border-radius:4px;padding:2px 2px 2px 9px;user-select:none}
+.m .na.on{border-color:var(--red);color:var(--red)}
+.m .na .ns{display:flex;align-items:center;gap:2px}
+.m .na .ns button{width:28px;height:26px;background:var(--soft);color:var(--ink);font-size:16px;font-weight:600;border-radius:3px}
+.m .na .ns span{min-width:18px;text-align:center;font-weight:600;font-size:13px}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line)}
 .bar .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .bar .sum{flex:1;line-height:1.2}
@@ -182,6 +187,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
+const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
 const tableLabel = t => isVip(t) ? t : 'โต๊ะ ' + t;
@@ -252,20 +258,25 @@ function renderOrder(table) {
       <div class="b"><div class="nm">${esc(i.name)}</div>${i.desc ? `<div class="ds">${fmt(i.desc)}</div>` : ''}
         ${i.soldOut ? '<div class="muted">หมด</div>' : `
         <div class="qty"><button data-id="${i.id}" data-d="-1" aria-label="ลด">−</button><span id="q-${i.id}">0</span><button class="add" data-id="${i.id}" data-d="1" aria-label="เพิ่ม">+</button></div>
+        ${i.nonAlc ? `<div class="na hidden" id="na-${i.id}">Non-alcohol <span class="ns"><button data-na="${i.id}" data-d="-1" aria-label="ลด">−</button><span id="nav-${i.id}">0</span><button data-na="${i.id}" data-d="1" aria-label="เพิ่ม">+</button></span></div>` : ''}
         <textarea rows="1" class="hidden" id="n-${i.id}" placeholder="หมายเหตุ เช่น หวานน้อย"></textarea>`}
       </div></div>`).join('');
 
   menuEl.addEventListener('click', e => {
     const im = e.target.closest('img.im');
     if (im) { const lb = document.createElement('div'); lb.className = 'lb'; lb.innerHTML = `<div class="x">×</div><img src="${im.src}" alt="">`; lb.onclick = () => lb.remove(); document.body.appendChild(lb); return; }
+    const nb = e.target.closest('button[data-na]');
+    if (nb) { const id = nb.dataset.na, c = cart[id]; if (!c) return; c.na = Math.min(c.qty, Math.max(0, (c.na || 0) + +nb.dataset.d)); $('#nav-' + id).textContent = c.na; $('#na-' + id).classList.toggle('on', c.na > 0); return; }
     const b = e.target.closest('button[data-id]'); if (!b) return;
     const id = b.dataset.id, d = +b.dataset.d;
-    const c = cart[id] || { qty: 0, note: '' };
-    c.qty = Math.max(0, c.qty + d);
+    const c = cart[id] || { qty: 0, note: '', na: 0 };
+    c.qty = Math.max(0, c.qty + d); c.na = Math.min(c.na || 0, c.qty);
+    if ($('#nav-' + id)) { $('#nav-' + id).textContent = c.na; $('#na-' + id).classList.toggle('on', c.na > 0); }
     if (c.qty) cart[id] = c; else delete cart[id];
     $('#q-' + id).textContent = c.qty;
     $('#m-' + id).classList.toggle('has', c.qty > 0);
     $('#n-' + id).classList.toggle('hidden', c.qty === 0);
+    const na = $('#na-' + id); if (na) na.classList.toggle('hidden', c.qty === 0);
     const n = count();
     $('#cnt').textContent = n ? 'เลือกแล้ว ' + n + ' แก้ว' : 'ยังไม่ได้เลือก';
     $('#send').disabled = !n;
@@ -274,7 +285,12 @@ function renderOrder(table) {
   $('#send').onclick = async () => {
     const btn = $('#send'); btn.disabled = true; btn.textContent = 'กำลังส่ง…'; $('#err').innerHTML = '';
     try {
-      const items = Object.entries(cart).map(([id, c]) => ({ id, name: findItem(id).name, qty: c.qty, note: ($('#n-' + id).value || '').trim() }));
+      const items = [];
+      for (const [id, c] of Object.entries(cart)) {
+        const name = findItem(id).name, note = ($('#n-' + id).value || '').trim(), na = c.na || 0;
+        if (c.qty - na > 0) items.push({ id, name, qty: c.qty - na, note, nonAlc: false });
+        if (na > 0) items.push({ id, name, qty: na, note, nonAlc: true });
+      }
       const key = dayKey();
       const no = await db.runTransaction(async tx => {
         const ref = db.collection('counters').doc(key); const snap = await tx.get(ref);
@@ -359,7 +375,7 @@ function drawCol(name, list) {
     <div class="order ${o.status}">
       <div class="h"><div class="t">${esc(tableLabel(o.table))}</div><div class="no">#${o.no}</div>
         <div class="ago" data-ago="${o.createdAt?.toDate ? o.createdAt.toDate().getTime() : Date.now()}">${ago(o.createdAt)}</div></div>
-      <ul>${o.items.map(i => `<li><b>${i.qty}×</b>${esc(i.name)}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</li>`).join('')}</ul>
+      <ul>${o.items.map(i => `<li><b>${i.qty}×</b>${esc(itemLabel(i))}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</li>`).join('')}</ul>
       <div class="acts">
         ${o.status === 'new' ? `<button class="primary" onclick="setStatus('${o.id}','doing')">รับทำ</button>` : ''}
         ${o.status === 'doing' ? `<button class="primary" onclick="setStatus('${o.id}','done')">เสร็จแล้ว</button>` : ''}
@@ -438,7 +454,7 @@ function drawReceipt(o) {
   line(isVip(o.table) ? o.table : 'โต๊ะ ' + o.table, isVip(o.table) ? 48 : 56, 700, 'center');
   rule();
   for (const it of o.items) {
-    x.font = `700 30px ${F}`; x.textAlign = 'left'; x.fillText(it.qty + '×', 8, y + 30); wrap(it.name, 30, 600, 64, W - 72);
+    x.font = `700 30px ${F}`; x.textAlign = 'left'; x.fillText(it.qty + '×', 8, y + 30); wrap(itemLabel(it), 30, 600, 64, W - 72);
     if (it.note) wrap('» ' + it.note, 24, 400, 64, W - 72);
     y += 6;
   }
@@ -491,19 +507,19 @@ async function renderReport() {
   const byMenu = {}, byTable = {};
   let glasses = 0;
   for (const o of all) for (const it of o.items) {
-    glasses += it.qty; byMenu[it.name] = (byMenu[it.name] || 0) + it.qty;
+    glasses += it.qty; byMenu[itemLabel(it)] = (byMenu[itemLabel(it)] || 0) + it.qty;
     byTable[o.table] = byTable[o.table] || { orders: new Set(), qty: 0 }; byTable[o.table].orders.add(o.no); byTable[o.table].qty += it.qty;
   }
   const tOrder = t => { const i = TABLES.indexOf(t); return i < 0 ? 999 : i; };
   const csv = [['ออเดอร์', 'เวลา', 'โต๊ะ', 'เมนู', 'จำนวน', 'หมายเหตุ', 'สถานะ']];
-  for (const o of all) for (const it of o.items) csv.push([o.no, o.createdAt?.toDate?.().toLocaleString('th-TH') || '', o.table, it.name, it.qty, it.note || '', o.status]);
+  for (const o of all) for (const it of o.items) csv.push([o.no, o.createdAt?.toDate?.().toLocaleString('th-TH') || '', o.table, itemLabel(it), it.qty, it.note || '', o.status]);
   app.innerHTML = `<div class="rep">
     <h1 style="font-weight:300;letter-spacing:.06em"><b style="color:var(--red)">X</b>-CLUSIVE NIGHT · สรุปออเดอร์</h1>
     <div class="kpi"><div>ออเดอร์<b>${all.length}</b></div><div>แก้วทั้งหมด<b>${glasses}</b></div><div>โต๊ะที่สั่ง<b>${Object.keys(byTable).length}</b></div></div>
     <p><button class="ghost" id="csv">ดาวน์โหลด CSV</button> <button class="ghost" onclick="print()">พิมพ์</button></p>
     <h2>ตามเมนู</h2><table><tr><th>เมนู</th><th class="n">แก้ว</th></tr>${Object.entries(byMenu).sort((a, b) => b[1] - a[1]).map(([n, q]) => `<tr><td>${esc(n)}</td><td class="n">${q}</td></tr>`).join('')}</table>
     <h2>ตามโต๊ะ</h2><table><tr><th>โต๊ะ</th><th class="n">ออเดอร์</th><th class="n">แก้ว</th></tr>${Object.entries(byTable).sort((a, b) => tOrder(a[0]) - tOrder(b[0])).map(([t, v]) => `<tr><td>${esc(t)}</td><td class="n">${v.orders.size}</td><td class="n">${v.qty}</td></tr>`).join('')}</table>
-    <h2>รายการทั้งหมด</h2><table><tr><th>#</th><th>เวลา</th><th>โต๊ะ</th><th>รายการ</th><th>สถานะ</th></tr>${all.map(o => `<tr><td>${o.no}</td><td>${timeStr(o.createdAt)}</td><td>${esc(o.table)}</td><td>${o.items.map(i => `${i.qty}× ${esc(i.name)}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}`).join('<br>')}</td><td>${esc(o.status)}</td></tr>`).join('')}</table></div>`;
+    <h2>รายการทั้งหมด</h2><table><tr><th>#</th><th>เวลา</th><th>โต๊ะ</th><th>รายการ</th><th>สถานะ</th></tr>${all.map(o => `<tr><td>${o.no}</td><td>${timeStr(o.createdAt)}</td><td>${esc(o.table)}</td><td>${o.items.map(i => `${i.qty}× ${esc(itemLabel(i))}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}`).join('<br>')}</td><td>${esc(o.status)}</td></tr>`).join('')}</table></div>`;
   $('#csv').onclick = () => {
     const txt = '\ufeff' + csv.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = 'x-clusive-night-drinks.csv'; a.click();
