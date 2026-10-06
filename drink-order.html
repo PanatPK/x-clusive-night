@@ -191,6 +191,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
+const VER = 'v6'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
 const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
@@ -309,18 +310,19 @@ function renderOrder(table) {
         no, table, items, qty: count(), status: 'new', printed: false, day: key,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      showDone(doc.id, no);
+      showDone(doc.id, no, items);
     } catch (e) {
       $('#err').innerHTML = `<div class="msg">ส่งไม่สำเร็จ ลองอีกครั้ง หรือแจ้งพนักงานได้เลย<br><small>${esc(e.message)}</small></div>`;
       btn.disabled = false; btn.textContent = 'สั่งเครื่องดื่ม';
     }
   };
 
-  function showDone(id, no) {
+  function showDone(id, no, items) {
     app.innerHTML = `<div class="wrap">${LOGO}<div class="done">
       <div class="muted">รับออเดอร์แล้ว · ${esc(tableLabel(table))}</div><div class="big">#${no}</div>
       <div class="pill" id="st">รอบาร์รับ</div>
-      <p class="muted" style="margin-top:28px;font-size:14px">หน้านี้จะอัปเดตเองเมื่อเครื่องดื่มเสร็จ</p>
+      <div style="margin:18px auto 0;max-width:320px;text-align:left;font-size:14px;line-height:1.6">${items.map(i => `<div><b style="color:var(--red)">${i.qty}×</b> ${esc(itemLabel(i))}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}</div>`).join('')}</div>
+      <p class="muted" style="margin-top:22px;font-size:14px">หน้านี้จะอัปเดตเองเมื่อเครื่องดื่มเสร็จ <span style="font-size:10px">${VER}</span></p>
       <p><button class="ghost" onclick="location.reload()">สั่งเพิ่ม</button></p></div></div>`;
     db.collection('orders').doc(id).onSnapshot(s => {
       const st = s.data()?.status, el = $('#st'); if (!el) return;
@@ -341,7 +343,7 @@ const BLE = [
 
 function renderBar() {
   app.innerHTML = `<div class="barwrap">
-    <div class="barhead"><h1><b>X</b>-CLUSIVE NIGHT · BAR</h1>
+    <div class="barhead"><h1><b>X</b>-CLUSIVE NIGHT · BAR <small style="font-size:11px;color:var(--ink-2)">${VER}</small></h1>
       <div class="status"><span class="dot" id="pdot"></span><span id="ptxt">ยังไม่ต่อปริ้นเตอร์</span></div>
       <button class="ghost" id="connect">ต่อปริ้นเตอร์</button>
       <button class="ghost" id="testTxt">ทดสอบตัวอักษร</button>
