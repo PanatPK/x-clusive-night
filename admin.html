@@ -173,6 +173,8 @@
     <button id="refresh">รีเฟรช</button>
     <button id="addBtn">เพิ่มรายชื่อ</button>
       <button id="seatBtn">นำเข้าผังที่นั่ง</button>
+      <button id="mergeAllBtn">ยุบชื่อซ้ำทั้งหมด</button>
+      <button id="inAllBtn">เช็คอินทั้งหมด</button>
       <button class="red" id="csv">ดาวน์โหลด CSV</button>
   </div>
 
@@ -675,6 +677,62 @@ async function toggleIn(key){
     try{ await window.storage.set(key, JSON.stringify({...r, key:undefined})); }catch(e){}
   }
 }
+
+/* ---------- ยุบชื่อซ้ำทั้งหมดในคลิกเดียว ----------
+   เก็บเรคคอร์ดหลัก = ตัวที่เช็คอินแล้ว > มีโต๊ะ > ลงทะเบียนก่อน  ที่เหลือรวมเข้าหาตัวหลัก */
+async function mergeAllDups(){
+  const dupOf = findDups();
+  const seen = new Set(); const groups = [];
+  Object.keys(dupOf).forEach(k=>{
+    if(seen.has(k)) return;
+    const g = [k, ...dupOf[k]].map(x=>rows.find(r=>r.key===x)).filter(r=>r && !r.mergeTo);
+    g.forEach(r=>seen.add(r.key));
+    if(g.length>1) groups.push(g);
+  });
+  if(!groups.length) return alert("ไม่มีชื่อซ้ำที่ต้องยุบ");
+  const score = r => (r.checkedIn?100:0) + ((r.table||"").trim()?10:0) - (Date.parse(r.submittedAt||0)||0)/1e13;
+  const plan = groups.map(g=>{ const main=[...g].sort((a,b)=>score(b)-score(a))[0]; return {main, others:g.filter(r=>r!==main)}; });
+  const msg = plan.map(p=>"เก็บ "+p.main.code+" "+p.main.name+"  ← ยุบ "+p.others.map(o=>o.code).join(", ")).join("\n");
+  if(!confirm("จะยุบชื่อซ้ำ "+plan.length+" กลุ่ม ("+plan.reduce((n,p)=>n+p.others.length,0)+" เรคคอร์ด):\n\n"+msg+"\n\nQR ของรหัสที่ถูกยุบยังสแกนได้ เช็คอินจะไปลงที่ตัวหลัก")) return;
+  mergeAllBtn.disabled = true; mergeAllBtn.textContent = "กำลังยุบ…";
+  for(const p of plan){
+    const mainPatch = {};
+    for(const r of p.others){
+      if(r.checkedIn && !p.main.checkedIn && !mainPatch.checkedIn){ mainPatch.checkedIn=true; mainPatch.checkedInAt=r.checkedInAt||new Date().toISOString(); mainPatch.checkedInBy=r.checkedInBy||""; }
+      if(!(p.main.table||"").trim() && !mainPatch.table && (r.table||"").trim()) mainPatch.table=r.table;
+      if(!(p.main.company||"").trim() && !mainPatch.company && (r.company||"").trim()) mainPatch.company=r.company;
+      if(!(p.main.email||"").trim() && !mainPatch.email && (r.email||"").trim()) mainPatch.email=r.email;
+      if(!(p.main.phone||"").trim() && !mainPatch.phone && (r.phone||"").trim()) mainPatch.phone=r.phone;
+      await patchRec(r.key, { mergeTo: p.main.code, table: "" });
+    }
+    if(Object.keys(mainPatch).length) await patchRec(p.main.key, mainPatch);
+  }
+  mergeAllBtn.disabled = false; mergeAllBtn.textContent = "ยุบชื่อซ้ำทั้งหมด";
+  draw();
+}
+document.getElementById("mergeAllBtn").onclick = mergeAllDups;
+
+/* ---------- เช็คอินทั้งหมด / ล้างเช็คอินทั้งหมด ---------- */
+async function checkInAll(){
+  const targets = rows.filter(r => r.attending==="yes" && !r.mergeTo && !r.checkedIn);
+  if(!targets.length){
+    if(confirm("ทุกคนเช็คอินแล้ว\n\nต้องการ \"ล้างเช็คอินทั้งหมด\" (ใช้ตอนทดสอบ) หรือไม่?")){
+      const done = rows.filter(r=>r.checkedIn);
+      if(!confirm("ยืนยันล้างเช็คอิน "+done.length+" คน?")) return;
+      inAllBtn.disabled = true;
+      for(const r of done) await patchRec(r.key, {checkedIn:false, checkedInAt:""});
+      inAllBtn.disabled = false; draw();
+    }
+    return;
+  }
+  if(!confirm("เช็คอินให้ทุกคนที่ยังไม่ได้เช็คอิน "+targets.length+" คน?")) return;
+  inAllBtn.disabled = true; inAllBtn.textContent = "กำลังเช็คอิน…";
+  const now = new Date().toISOString();
+  for(const r of targets) await patchRec(r.key, {checkedIn:true, checkedInAt:now, checkedInBy:"admin-all"});
+  inAllBtn.disabled = false; inAllBtn.textContent = "เช็คอินทั้งหมด";
+  draw();
+}
+document.getElementById("inAllBtn").onclick = checkInAll;
 
 /* ลิงก์บัตรเชิญเฉพาะบุคคล อิงจากที่อยู่ของหน้านี้ */
 function guestLink(r){
