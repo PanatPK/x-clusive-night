@@ -191,7 +191,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
-const VER = 'v7'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
+const VER = 'v8'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
 const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
@@ -420,7 +420,12 @@ function beep() {
 /* Bluetooth */
 async function connectPrinter() {
   try {
-    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE.map(x => x.s) });
+    let device;
+    try { // รอบแรกกรองให้เห็นเฉพาะอุปกรณ์ที่เป็นปริ้นเตอร์
+      device = await navigator.bluetooth.requestDevice({ filters: [...BLE.map(b => ({ services: [b.s] })), { namePrefix: 'AN' }, { namePrefix: 'Printer' }, { namePrefix: 'BlueTooth' }, { namePrefix: 'MTP' }, { namePrefix: 'PT' }], optionalServices: BLE.map(x => x.s) });
+    } catch (e) { // ไม่เจอ/ยกเลิก → โชว์ทุกอุปกรณ์
+      device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE.map(x => x.s) });
+    }
     const server = await device.gatt.connect();
     let ch = null;
     for (const b of BLE) { try { ch = await (await server.getPrimaryService(b.s)).getCharacteristic(b.c); break; } catch {} }
