@@ -115,6 +115,12 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 .order li{padding:3px 0}
 .order li b{color:var(--red);margin-right:8px}
 .order li .nt{display:block;font-size:13px;color:#7A4A00;background:#FFF4DC;padding:3px 8px;border-radius:3px;margin-top:3px}
+.order li.tg{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:6px 8px;border:1.5px solid var(--line);border-radius:4px;margin:4px 0;user-select:none}
+.order li.tg .ck{flex:none;width:22px;height:22px;border:2px solid var(--ink);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;margin-top:2px}
+.order li.tg.ok{border-color:var(--ok);background:#EEF7EF}
+.order li.tg.ok .ck{background:var(--ok);border-color:var(--ok)}
+.order li.tg.ok .tx{text-decoration:line-through;color:var(--ink-2)}
+.order li.tg .tx{flex:1}
 .order .acts{display:flex;gap:8px;margin-top:8px}
 .order .acts button{padding:9px 14px;font-weight:600;font-size:14px}
 .order .acts .primary{width:auto}
@@ -191,7 +197,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
-const VER = 'v8'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
+const VER = 'v9'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
 const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
@@ -386,15 +392,31 @@ function drawCol(name, list) {
     <div class="order ${o.status}">
       <div class="h"><div class="t">${esc(tableLabel(o.table))}</div><div class="no">#${o.no}</div>
         <div class="ago" data-ago="${o.createdAt?.toDate ? o.createdAt.toDate().getTime() : Date.now()}">${ago(o.createdAt)}</div></div>
-      <ul>${o.items.map(i => `<li><b>${i.qty}×</b>${esc(itemLabel(i))}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</li>`).join('')}</ul>
+      <ul>${o.items.map((i, k) => o.status === 'doing' || o.status === 'done'
+          ? `<li class="tg ${i.done ? 'ok' : ''}" onclick="toggleItem('${o.id}',${k})"><span class="ck">${i.done ? '✓' : ''}</span><span class="tx"><b>${i.qty}×</b>${esc(itemLabel(i))}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</span></li>`
+          : `<li><b>${i.qty}×</b>${esc(itemLabel(i))}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</li>`).join('')}</ul>
+      ${o.status === 'doing' ? `<div class="muted" style="font-size:12px;margin:-2px 0 6px">แตะรายการที่เสร็จแล้ว · ${o.items.filter(i => i.done).length}/${o.items.length} พร้อมเสิร์ฟ</div>` : ''}
       <div class="acts">
         ${o.status === 'new' ? `<button class="primary" onclick="setStatus('${o.id}','doing')">รับทำ</button>` : ''}
-        ${o.status === 'doing' ? `<button class="primary" onclick="setStatus('${o.id}','done')">เสร็จแล้ว</button>` : ''}
+        ${o.status === 'doing' ? `<button class="primary" onclick="finishAll('${o.id}')">เสร็จทั้งหมด</button>` : ''}
         ${o.status === 'done' ? `<button class="primary" onclick="setStatus('${o.id}','served')">เสิร์ฟแล้ว</button>` : ''}
         <button class="ghost" onclick="reprint('${o.id}')">${o.printed ? 'พิมพ์อีกครั้ง' : 'พิมพ์'}</button>
       </div></div>`).join('') : '<div class="empty">ว่าง</div>';
 }
 window.setStatus = (id, status) => db.collection('orders').doc(id).update({ status });
+window.toggleItem = async (id, k) => {
+  const ref = db.collection('orders').doc(id);
+  await db.runTransaction(async tx => {
+    const d = (await tx.get(ref)).data(); if (!d) return;
+    const items = d.items.map((it, j) => j === k ? { ...it, done: !it.done } : it);
+    const allDone = items.every(it => it.done);
+    tx.update(ref, { items, status: allDone ? 'done' : (d.status === 'done' ? 'doing' : d.status) });
+  });
+};
+window.finishAll = async id => {
+  const ref = db.collection('orders').doc(id); const d = (await ref.get()).data(); if (!d) return;
+  await ref.update({ items: d.items.map(it => ({ ...it, done: true })), status: 'done' });
+};
 window.reprint = async id => {
   const s = await db.collection('orders').doc(id).get();
   try { await printOrder({ id, ...s.data() }); await s.ref.update({ printed: true }); } catch (e) { alert('พิมพ์ไม่ได้: ' + e.message); }
