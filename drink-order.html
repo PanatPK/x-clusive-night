@@ -197,7 +197,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
-const VER = 'v9'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
+const VER = 'v11'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
 const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
@@ -240,23 +240,28 @@ function renderPick() {
   let sel = null;
   app.innerHTML = `<div class="wrap">${LOGO}<div class="pick"><h2>เลือกโต๊ะของคุณ</h2>
     <div class="tgrid" id="tg">${TABLES.map(t => `<button class="${isVip(t) ? 'vip' : ''}" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-    <p style="margin-top:22px"><button class="primary" id="go" disabled>สั่งเครื่องดื่ม</button></p></div></div>`;
+    <div style="margin-top:18px"><input id="who" type="text" maxlength="30" placeholder="ชื่อผู้สั่ง เช่น คุณเอ (ไม่บังคับ)" autocomplete="off" style="text-align:center"></div>
+    <p style="margin-top:12px"><button class="primary" id="go" disabled>สั่งเครื่องดื่ม</button></p></div></div>`;
+  try { $('#who').value = localStorage.who || ''; } catch {}
   $('#tg').addEventListener('click', e => {
     const b = e.target.closest('button[data-t]'); if (!b) return;
     document.querySelectorAll('#tg button').forEach(x => x.classList.toggle('on', x === b));
     sel = b.dataset.t; $('#go').disabled = false;
   });
-  $('#go').onclick = () => { if (sel) location.search = '?table=' + encodeURIComponent(sel); };
+  $('#go').onclick = () => { if (!sel) return; const who = $('#who').value.trim(); try { localStorage.who = who; } catch {} location.search = '?table=' + encodeURIComponent(sel) + (who ? '&who=' + encodeURIComponent(who) : ''); };
 }
 
 /* ---------- หน้าสั่ง ---------- */
 function renderOrder(table) {
   if (!TABLES.includes(table)) { renderPick(); return; }
+  let who = (params.get('who') || '').trim().slice(0, 30);
+  if (!who) { try { who = (localStorage.who || '').slice(0, 30); } catch {} }
   const cart = {}; // id -> {qty, note}
   const count = () => Object.values(cart).reduce((a, b) => a + b.qty, 0);
 
   app.innerHTML = `<div class="wrap">
     <div class="head">${LOGO_SM}<div class="tb"><small>TABLE</small><b>${esc(table)}</b></div></div>
+    <input id="who" type="text" maxlength="30" placeholder="ชื่อผู้สั่ง เช่น คุณเอ (ไม่บังคับ)" autocomplete="off" value="${esc(who)}" style="margin:4px 0 2px">
     <div class="mgrid" id="menu"></div>
     <div id="err"></div></div>
   <div class="bar"><div class="in"><div class="sum"><div class="muted" id="cnt">ยังไม่ได้เลือก</div></div>
@@ -299,6 +304,7 @@ function renderOrder(table) {
 
   $('#send').onclick = async () => {
     const btn = $('#send'); btn.disabled = true; btn.textContent = 'กำลังส่ง…'; $('#err').innerHTML = '';
+    who = $('#who').value.trim().slice(0, 30); try { localStorage.who = who; } catch {}
     try {
       const items = [];
       for (const [id, c] of Object.entries(cart)) {
@@ -313,7 +319,7 @@ function renderOrder(table) {
         const next = (snap.exists ? snap.data().n : 0) + 1; tx.set(ref, { n: next }); return next;
       });
       const doc = await db.collection('orders').add({
-        no, table, items, qty: count(), status: 'new', printed: false, day: key,
+        no, table, who, items, qty: count(), status: 'new', printed: false, day: key,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
       showDone(doc.id, no, items);
@@ -325,7 +331,7 @@ function renderOrder(table) {
 
   function showDone(id, no, items) {
     app.innerHTML = `<div class="wrap">${LOGO}<div class="done">
-      <div class="muted">รับออเดอร์แล้ว · ${esc(tableLabel(table))}</div><div class="big">#${no}</div>
+      <div class="muted">รับออเดอร์แล้ว · ${esc(tableLabel(table))}${who ? ' · ' + esc(who) : ''}</div><div class="big">#${no}</div>
       <div class="pill" id="st">รอบาร์รับ</div>
       <div style="margin:18px auto 0;max-width:320px;text-align:left;font-size:14px;line-height:1.6">${items.map(i => `<div><b style="color:var(--red)">${i.qty}×</b> ${esc(itemLabel(i))}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}</div>`).join('')}</div>
       <p class="muted" style="margin-top:22px;font-size:14px">หน้านี้จะอัปเดตเองเมื่อเครื่องดื่มเสร็จ <span style="font-size:10px">${VER}</span></p>
@@ -390,7 +396,7 @@ function drawCol(name, list) {
   $('#c' + name).textContent = list.length;
   $('#l' + name).innerHTML = list.length ? list.map(o => `
     <div class="order ${o.status}">
-      <div class="h"><div class="t">${esc(tableLabel(o.table))}</div><div class="no">#${o.no}</div>
+      <div class="h"><div class="t">${esc(tableLabel(o.table))}</div><div class="no">#${o.no}${o.who ? ` · <b style="color:var(--ink)">${esc(o.who)}</b>` : ''}</div>
         <div class="ago" data-ago="${o.createdAt?.toDate ? o.createdAt.toDate().getTime() : Date.now()}">${ago(o.createdAt)}</div></div>
       <ul>${o.items.map((i, k) => o.status === 'doing' || o.status === 'done'
           ? `<li class="tg ${i.done ? 'ok' : ''}" onclick="toggleItem('${o.id}',${k})"><span class="ck">${i.done ? '✓' : ''}</span><span class="tx"><b>${i.qty}×</b>${esc(itemLabel(i))}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ''}</span></li>`
@@ -490,6 +496,7 @@ function drawReceipt(o) {
   line(`#${o.no}   ${timeStr(o.createdAt)}`, 22, 400, 'center');
   rule();
   line(isVip(o.table) ? o.table : 'โต๊ะ ' + o.table, isVip(o.table) ? 48 : 56, 700, 'center');
+  if (o.who) line(o.who, 28, 500, 'center');
   rule();
   for (const it of o.items) {
     x.font = `700 30px ${F}`; x.textAlign = 'left'; x.fillText(it.qty + '×', 8, y + 30); wrap(itemLabel(it), 30, 600, 64, W - 72);
@@ -551,15 +558,15 @@ async function renderReport() {
     byTable[o.table] = byTable[o.table] || { orders: new Set(), qty: 0 }; byTable[o.table].orders.add(o.no); byTable[o.table].qty += it.qty;
   }
   const tOrder = t => { const i = TABLES.indexOf(t); return i < 0 ? 999 : i; };
-  const csv = [['ออเดอร์', 'เวลา', 'โต๊ะ', 'เมนู', 'จำนวน', 'หมายเหตุ', 'สถานะ']];
-  for (const o of all) for (const it of o.items) csv.push([o.no, o.createdAt?.toDate?.().toLocaleString('th-TH') || '', o.table, itemLabel(it), it.qty, it.note || '', o.status]);
+  const csv = [['ออเดอร์', 'เวลา', 'โต๊ะ', 'ผู้สั่ง', 'เมนู', 'จำนวน', 'หมายเหตุ', 'สถานะ']];
+  for (const o of all) for (const it of o.items) csv.push([o.no, o.createdAt?.toDate?.().toLocaleString('th-TH') || '', o.table, o.who || '', itemLabel(it), it.qty, it.note || '', o.status]);
   app.innerHTML = `<div class="rep">
     <h1 style="font-weight:300;letter-spacing:.06em"><b style="color:var(--red)">X</b>-CLUSIVE NIGHT · สรุปออเดอร์</h1>
     <div class="kpi"><div>ออเดอร์<b>${all.length}</b></div><div>แก้วทั้งหมด<b>${glasses}</b></div><div>โต๊ะที่สั่ง<b>${Object.keys(byTable).length}</b></div></div>
     <p><button class="ghost" id="csv">ดาวน์โหลด CSV</button> <button class="ghost" onclick="print()">พิมพ์</button></p>
     <h2>ตามเมนู</h2><table><tr><th>เมนู</th><th class="n">แก้ว</th></tr>${Object.entries(byMenu).sort((a, b) => b[1] - a[1]).map(([n, q]) => `<tr><td>${esc(n)}</td><td class="n">${q}</td></tr>`).join('')}</table>
     <h2>ตามโต๊ะ</h2><table><tr><th>โต๊ะ</th><th class="n">ออเดอร์</th><th class="n">แก้ว</th></tr>${Object.entries(byTable).sort((a, b) => tOrder(a[0]) - tOrder(b[0])).map(([t, v]) => `<tr><td>${esc(t)}</td><td class="n">${v.orders.size}</td><td class="n">${v.qty}</td></tr>`).join('')}</table>
-    <h2>รายการทั้งหมด</h2><table><tr><th>#</th><th>เวลา</th><th>โต๊ะ</th><th>รายการ</th><th>สถานะ</th></tr>${all.map(o => `<tr><td>${o.no}</td><td>${timeStr(o.createdAt)}</td><td>${esc(o.table)}</td><td>${o.items.map(i => `${i.qty}× ${esc(itemLabel(i))}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}`).join('<br>')}</td><td>${esc(o.status)}</td></tr>`).join('')}</table></div>`;
+    <h2>รายการทั้งหมด</h2><table><tr><th>#</th><th>เวลา</th><th>โต๊ะ</th><th>ผู้สั่ง</th><th>รายการ</th><th>สถานะ</th></tr>${all.map(o => `<tr><td>${o.no}</td><td>${timeStr(o.createdAt)}</td><td>${esc(o.table)}</td><td>${esc(o.who || '')}</td><td>${o.items.map(i => `${i.qty}× ${esc(itemLabel(i))}${i.note ? ` <span class="muted">(${esc(i.note)})</span>` : ''}`).join('<br>')}</td><td>${esc(o.status)}</td></tr>`).join('')}</table></div>`;
   $('#csv').onclick = () => {
     const txt = '\ufeff' + csv.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = 'x-clusive-night-drinks.csv'; a.click();
