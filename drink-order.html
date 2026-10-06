@@ -77,6 +77,10 @@ input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border
 .m .na .ns{display:flex;align-items:center;gap:2px}
 .m .na .ns button{width:28px;height:26px;background:var(--soft);color:var(--ink);font-size:16px;font-weight:600;border-radius:3px}
 .m .na .ns span{min-width:18px;text-align:center;font-weight:600;font-size:13px}
+.m .mx{display:flex;flex-wrap:wrap;gap:6px}
+.m .mx .lb{font-size:11px;color:var(--ink-2);width:100%;margin-bottom:-2px}
+.m .mx button{font-size:12px;font-weight:500;padding:6px 10px;border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--ink)}
+.m .mx button.on{border-color:var(--red);background:var(--red);color:#fff}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line)}
 .bar .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .bar .sum{flex:1;line-height:1.2}
@@ -187,7 +191,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
-const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '');
+const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
 const tableLabel = t => isVip(t) ? t : 'โต๊ะ ' + t;
@@ -259,12 +263,15 @@ function renderOrder(table) {
         ${i.soldOut ? '<div class="muted">หมด</div>' : `
         <div class="qty"><button data-id="${i.id}" data-d="-1" aria-label="ลด">−</button><span id="q-${i.id}">0</span><button class="add" data-id="${i.id}" data-d="1" aria-label="เพิ่ม">+</button></div>
         ${i.nonAlc ? `<div class="na hidden" id="na-${i.id}">Non-alcohol <span class="ns"><button data-na="${i.id}" data-d="-1" aria-label="ลด">−</button><span id="nav-${i.id}">0</span><button data-na="${i.id}" data-d="1" aria-label="เพิ่ม">+</button></span></div>` : ''}
+        ${i.mixers ? `<div class="mx hidden" id="mx-${i.id}"><span class="lb">เลือกมิกเซอร์ (เลือกได้หลายอย่าง)</span>${i.mixers.map(m => `<button type="button" data-mx="${i.id}" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div>` : ''}
         <textarea rows="1" class="hidden" id="n-${i.id}" placeholder="หมายเหตุ เช่น หวานน้อย"></textarea>`}
       </div></div>`).join('');
 
   menuEl.addEventListener('click', e => {
     const im = e.target.closest('img.im');
     if (im) { const lb = document.createElement('div'); lb.className = 'lb'; lb.innerHTML = `<div class="x">×</div><img src="${im.src}" alt="">`; lb.onclick = () => lb.remove(); document.body.appendChild(lb); return; }
+    const mb = e.target.closest('button[data-mx]');
+    if (mb) { mb.classList.toggle('on'); return; }
     const nb = e.target.closest('button[data-na]');
     if (nb) { const id = nb.dataset.na, c = cart[id]; if (!c) return; c.na = Math.min(c.qty, Math.max(0, (c.na || 0) + +nb.dataset.d)); $('#nav-' + id).textContent = c.na; $('#na-' + id).classList.toggle('on', c.na > 0); return; }
     const b = e.target.closest('button[data-id]'); if (!b) return;
@@ -277,6 +284,7 @@ function renderOrder(table) {
     $('#m-' + id).classList.toggle('has', c.qty > 0);
     $('#n-' + id).classList.toggle('hidden', c.qty === 0);
     const na = $('#na-' + id); if (na) na.classList.toggle('hidden', c.qty === 0);
+    const mx = $('#mx-' + id); if (mx) mx.classList.toggle('hidden', c.qty === 0);
     const n = count();
     $('#cnt').textContent = n ? 'เลือกแล้ว ' + n + ' แก้ว' : 'ยังไม่ได้เลือก';
     $('#send').disabled = !n;
@@ -288,8 +296,9 @@ function renderOrder(table) {
       const items = [];
       for (const [id, c] of Object.entries(cart)) {
         const name = findItem(id).name, note = ($('#n-' + id).value || '').trim(), na = c.na || 0;
-        if (c.qty - na > 0) items.push({ id, name, qty: c.qty - na, note, nonAlc: false });
-        if (na > 0) items.push({ id, name, qty: na, note, nonAlc: true });
+        const mix = [...document.querySelectorAll(`#mx-${id} button.on`)].map(b => b.dataset.m);
+        if (c.qty - na > 0) items.push({ id, name, qty: c.qty - na, note, nonAlc: false, mix });
+        if (na > 0) items.push({ id, name, qty: na, note, nonAlc: true, mix });
       }
       const key = dayKey();
       const no = await db.runTransaction(async tx => {
