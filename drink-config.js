@@ -27,4 +27,7 @@ const MENU = [
   { id: 'd5', name: 'OLD FASHIONED', desc: 'Rich, smooth and timeless.\n\n**Ingredients :**\nBourbon Whiskey / Sugar / Angostura Bitter', img: 'img/d5.jpg' },
   { id: 'd6', name: 'MOJITO', desc: 'Cool, refreshing and timeless.\n\n**Ingredients :**\nLight Rum / Fresh Lime / Sugar / Mint Leaves / Soda', img: 'img/d6.jpg', nonAlc: true },
   { id: 'd7', name: 'MARGARITA', desc: 'Crisp, zesty and refreshing.\n\n**Ingredients :**\nTequila / Triple Sec / Lime Juice / Simple Syrup', img: 'img/d7.jpg' },
+  { id: 'd8', name: 'WHISKY', desc: "Jack Daniel's Tennessee Whiskey\nBold, smooth and classic.", img: 'img/d8.jpg', mixers: ['น้ำเปล่า', 'โซดา', 'โค้ก', 'สไปรท์'] },
+  { id: 'd9', name: 'WHITE WINE', desc: 'House White Wine\nCrisp, elegant and refreshing.', img: 'img/d9.jpg' },
+  { id: 'd10', name: 'RED WINE', desc: 'House Red Wine\nBold, elegant and smooth.', img: 'img/d10.jpg' },
 ];
