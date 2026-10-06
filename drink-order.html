@@ -191,7 +191,7 @@ const params = new URLSearchParams(location.search);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const findItem = id => MENU.find(i => i.id === id);
-const VER = 'v6'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
+const VER = 'v7'; // เลขเวอร์ชันไฟล์ ไว้เช็กว่าหน้าโหลดไฟล์ใหม่แล้ว
 const itemLabel = it => it.name + (it.nonAlc ? ' (NON-ALC)' : '') + (it.mix && it.mix.length ? ' + ' + it.mix.join(', ') : '');
 const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); // **หนา**
 const isVip = t => /vip/i.test(t);
@@ -501,7 +501,9 @@ function escStarBytes(canvas) { // โหมด B: ESC * 24-dot column (รอ�
   out.push(0x1B, 0x32, 0x0A, 0x0A, 0x0A, 0x0A);
   return new Uint8Array(out);
 }
-async function printOrder(o) {
+let printChain = Promise.resolve(); // คิวพิมพ์: ส่งทีละใบ ห้ามซ้อนกัน ไม่งั้นบิลออกเป็นขยะ
+function printOrder(o) { const job = () => printOrderNow(o); const p = printChain.then(job, job); printChain = p.catch(() => {}); return p; }
+async function printOrderNow(o) {
   await document.fonts.ready;
   const c = drawReceipt(o);
   await send((localStorage.rmode || 'gsv') === 'escstar' ? escStarBytes(c) : rasterBytes(c));
